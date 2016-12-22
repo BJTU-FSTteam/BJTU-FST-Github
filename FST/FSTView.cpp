@@ -147,7 +147,6 @@ CFSTDoc* CFSTView::GetDocument() const // 非调试版本是内联的
 
 void CFSTView::OnStartButton()
 {
-	// TODO: 在此添加命令处理程序代码
 }
 
 
