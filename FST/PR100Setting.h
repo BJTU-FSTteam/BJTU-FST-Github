@@ -1,4 +1,5 @@
 #pragma once
+#include "afxwin.h"
 
 
 // PR100Setting ¶Ô»°¿ò
@@ -21,5 +22,21 @@ protected:
 
 	DECLARE_MESSAGE_MAP()
 public:
-	afx_msg void OnEnChangeLuEdit2();
+	afx_msg void OnEnChangeLuEdit();
+	afx_msg void OnCbnSelchangeFrCombo();
+	afx_msg void OnCbnSelchangeAtCombo();
+	afx_msg void OnEnChangeAdEdit();
+	afx_msg void OnEnChangeLdEdit();
+	afx_msg void OnBnClickedOk();
+	afx_msg void OnBnClickedCancel();
+	int curAT;
+	CString m_AD;
+	CComboBox m_ctrlAT;
+	CString m_AT;
+	CComboBox m_cbFrequency;
+	CString m_strFrequency;
+	CString m_FR;
+	CString m_LD;
+	CString m_LU;
+	BOOL OnInitDialog();
 };

@@ -14,7 +14,6 @@
 #define IDC_LD_EDIT                     1002
 #define IDC_AD_EDIT                     1003
 #define IDC_AT_COMBO                    1004
-#define IDC_AT_COMBO2                   1005
 #define IDC_FR_COMBO                    1005
 #define ID_PR100_SETTING                32771
 #define ID_START_BUTTON                 32772
