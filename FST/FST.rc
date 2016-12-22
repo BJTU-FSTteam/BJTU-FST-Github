@@ -69,9 +69,7 @@ END
 // Icon with lowest ID value placed first to ensure application icon
 // remains consistent on all systems.
 IDR_MAINFRAME           ICON                    "res\\FST.ico"
-
 IDR_FSTTYPE             ICON                    "res\\FSTDoc.ico"
-
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -79,7 +77,6 @@ IDR_FSTTYPE             ICON                    "res\\FSTDoc.ico"
 //
 
 IDR_MAINFRAME           BITMAP                  "res\\Toolbar.bmp"
-
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -179,11 +176,13 @@ BEGIN
     DEFPUSHBUTTON   "确定",IDOK,113,41,50,14,WS_GROUP
 END
 
-IDD_FST_FORM DIALOGEX 0, 0, 320, 200
+IDD_FST_FORM DIALOGEX 0, 0, 543, 352
 STYLE DS_SETFONT | DS_FIXEDSYS | WS_CHILD
 FONT 9, "MS Shell Dlg", 0, 0, 0x1
 BEGIN
     LTEXT           "TODO: 将窗体控件放置在此对话框上。",IDC_STATIC,24,42,280,8
+    GROUPBOX        "Static",IDC_STATIC,14,254,514,81
+    LTEXT           "当前频率",IDC_STATIC,16,268,37,13
 END
 
 
@@ -245,12 +244,23 @@ BEGIN
     IDD_FST_FORM, DIALOG
     BEGIN
         LEFTMARGIN, 7
-        RIGHTMARGIN, 313
+        RIGHTMARGIN, 536
         TOPMARGIN, 7
-        BOTTOMMARGIN, 193
+        BOTTOMMARGIN, 345
     END
 END
 #endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// AFX_DIALOG_LAYOUT
+//
+
+IDD_FST_FORM AFX_DIALOG_LAYOUT
+BEGIN
+    0
+END
 
 
 /////////////////////////////////////////////////////////////////////////////
