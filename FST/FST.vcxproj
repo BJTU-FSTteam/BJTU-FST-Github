@@ -193,6 +193,7 @@
     <ClInclude Include="FSTDoc.h" />
     <ClInclude Include="FSTView.h" />
     <ClInclude Include="MainFrm.h" />
+    <ClInclude Include="PR100Setting.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
@@ -202,6 +203,7 @@
     <ClCompile Include="FSTDoc.cpp" />
     <ClCompile Include="FSTView.cpp" />
     <ClCompile Include="MainFrm.cpp" />
+    <ClCompile Include="PR100Setting.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>

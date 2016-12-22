@@ -69,7 +69,9 @@ END
 // Icon with lowest ID value placed first to ensure application icon
 // remains consistent on all systems.
 IDR_MAINFRAME           ICON                    "res\\FST.ico"
+
 IDR_FSTTYPE             ICON                    "res\\FSTDoc.ico"
+
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -77,6 +79,7 @@ IDR_FSTTYPE             ICON                    "res\\FSTDoc.ico"
 //
 
 IDR_MAINFRAME           BITMAP                  "res\\Toolbar.bmp"
+
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -176,13 +179,34 @@ BEGIN
     DEFPUSHBUTTON   "确定",IDOK,113,41,50,14,WS_GROUP
 END
 
-IDD_FST_FORM DIALOGEX 0, 0, 543, 352
+IDD_FST_FORM DIALOGEX 0, 0, 320, 200
 STYLE DS_SETFONT | DS_FIXEDSYS | WS_CHILD
 FONT 9, "MS Shell Dlg", 0, 0, 0x1
 BEGIN
     LTEXT           "TODO: 将窗体控件放置在此对话框上。",IDC_STATIC,24,42,280,8
     GROUPBOX        "Static",IDC_STATIC,14,254,514,81
     LTEXT           "当前频率",IDC_STATIC,16,268,37,13
+END
+
+IDD_PR100_DIALOG DIALOGEX 0, 0, 229, 275
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "设备参数设置"
+FONT 10, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    DEFPUSHBUTTON   "确定",IDOK,39,242,50,14
+    PUSHBUTTON      "取消",IDCANCEL,126,242,50,14
+    LTEXT           "带宽",IDC_STATIC,34,36,19,8
+    COMBOBOX        IDC_COMBO_Frequency,129,35,48,30,CBS_DROPDOWNLIST | CBS_SORT | WS_VSCROLL | WS_TABSTOP
+    LTEXT           "电平单位",IDC_STATIC,30,62,46,8
+    EDITTEXT        IDC_LU_EDIT,128,59,48,14,ES_AUTOHSCROLL | WS_DISABLED
+    LTEXT           "电平测量时间",IDC_STATIC,29,86,57,8
+    EDITTEXT        IDC_LD_EDIT,128,82,48,14,ES_AUTOHSCROLL | WS_DISABLED
+    LTEXT           "音频检测时间",IDC_STATIC,30,113,57,8
+    EDITTEXT        IDC_AD_EDIT,126,107,48,14,ES_AUTOHSCROLL | WS_DISABLED
+    LTEXT           "天线衰耗",IDC_STATIC,31,140,57,8
+    COMBOBOX        IDC_AT_COMBO,125,137,48,30,CBS_DROPDOWNLIST | CBS_SORT | WS_VSCROLL | WS_TABSTOP
+    LTEXT           "测量频率",IDC_STATIC,30,170,57,8
+    COMBOBOX        IDC_FR_COMBO,125,171,48,30,CBS_DROPDOWN | CBS_SORT | WS_VSCROLL | WS_TABSTOP
 END
 
 
@@ -244,9 +268,17 @@ BEGIN
     IDD_FST_FORM, DIALOG
     BEGIN
         LEFTMARGIN, 7
-        RIGHTMARGIN, 536
+        RIGHTMARGIN, 313
         TOPMARGIN, 7
-        BOTTOMMARGIN, 345
+        BOTTOMMARGIN, 193
+    END
+
+    IDD_PR100_DIALOG, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 222
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 268
     END
 END
 #endif    // APSTUDIO_INVOKED
@@ -259,6 +291,38 @@ END
 
 IDD_FST_FORM AFX_DIALOG_LAYOUT
 BEGIN
+    0
+END
+
+IDD_PR100_DIALOG AFX_DIALOG_LAYOUT
+BEGIN
+    0
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Dialog Info
+//
+
+IDD_PR100_DIALOG DLGINIT
+BEGIN
+    IDC_AT_COMBO, 0x403, 7, 0
+0x2020, 0x2030, 0x4264, "\000" 
+    IDC_AT_COMBO, 0x403, 7, 0
+0x3120, 0x2030, 0x4264, "\000" 
+    IDC_AT_COMBO, 0x403, 7, 0
+0x3220, 0x2030, 0x4264, "\000" 
+    IDC_AT_COMBO, 0x403, 7, 0
+0x3320, 0x2030, 0x4264, "\000" 
+    IDC_AT_COMBO, 0x403, 7, 0
+0x3420, 0x2030, 0x4264, "\000" 
+    IDC_AT_COMBO, 0x403, 8, 0
+0x3520, 0x2030, 0x4264, 0x0020, 
+    IDC_FR_COMBO, 0x403, 8, 0
+0x3634, 0x2e37, 0x3239, 0x0035, 
+    IDC_FR_COMBO, 0x403, 8, 0
+0x3534, 0x2e37, 0x3035, 0x0030, 
     0
 END
 
