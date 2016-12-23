@@ -12,9 +12,34 @@
 #define IDC_COMBO_Frequency             1000
 #define IDC_LU_EDIT                     1001
 #define IDC_LD_EDIT                     1002
+#define IDC_EDIT_FR                     1002
 #define IDC_AD_EDIT                     1003
+#define IDC_EDIT_CurSpeed               1003
 #define IDC_AT_COMBO                    1004
+#define IDC_LINE_EDIT                   1004
 #define IDC_FR_COMBO                    1005
+#define IDC_DISTANCE_EDIT               1005
+#define IDC_EDIT_GridDis                1006
+#define IDC_DIAMETER_EDIT               1007
+#define IDC_RATE_COMBO                  1008
+#define IDC_LOSSDB_EDIT                 1009
+#define IDC_DIAMETER_SET                1010
+#define IDC_LOSSDB_SPIN                 1011
+#define IDC_EDIT_CurMileage             1013
+#define IDC_UPDOWN_COMBO                1014
+#define IDC_MAINTANCE_COMBO             1015
+#define IDC_CONTROLSTATUS               1016
+#define IDC_EDIT20                      1018
+#define IDC_EDIT_CurDBValue             1019
+#define IDC_EDIT_DBBC                   1020
+#define IDC_FILENAME_EDIT               1021
+#define IDC_SPEED_EDIT                  1024
+#define IDC_MODIFY_EDIT                 1025
+#define IDC_FILENUM_EDIT                1026
+#define IDC_SPEED_SPIN                  1027
+#define IDC_MODIFY_SPIN                 1028
+#define IDC_SPIN5                       1029
+#define IDC_SAVEFILE_SPIN               1029
 #define ID_PR100_SETTING                32771
 #define ID_START_BUTTON                 32772
 #define ID_STOP_BUTTON                  32773
@@ -28,7 +53,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        313
 #define _APS_NEXT_COMMAND_VALUE         32777
-#define _APS_NEXT_CONTROL_VALUE         1002
+#define _APS_NEXT_CONTROL_VALUE         1030
 #define _APS_NEXT_SYMED_VALUE           310
 #endif
 #endif
