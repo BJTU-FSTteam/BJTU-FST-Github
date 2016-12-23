@@ -69,9 +69,7 @@ END
 // Icon with lowest ID value placed first to ensure application icon
 // remains consistent on all systems.
 IDR_MAINFRAME           ICON                    "res\\FST.ico"
-
 IDR_FSTTYPE             ICON                    "res\\FSTDoc.ico"
-
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -79,7 +77,6 @@ IDR_FSTTYPE             ICON                    "res\\FSTDoc.ico"
 //
 
 IDR_MAINFRAME           BITMAP                  "res\\Toolbar.bmp"
-
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -179,13 +176,63 @@ BEGIN
     DEFPUSHBUTTON   "确定",IDOK,113,41,50,14,WS_GROUP
 END
 
-IDD_FST_FORM DIALOGEX 0, 0, 546, 350
-STYLE DS_SETFONT | DS_FIXEDSYS | WS_CHILD
-FONT 10, "MS Shell Dlg", 400, 0, 0x1
+IDD_FST_FORM DIALOGEX 0, 0, 553, 352
+STYLE DS_SETFONT | WS_CHILD
+FONT 10, "宋体", 400, 0, 0x0
 BEGIN
-    LTEXT           "TODO: 将窗体控件放置在此对话框上。",IDC_STATIC,24,42,280,8
-    GROUPBOX        "Static",IDC_STATIC,14,254,514,81
-    LTEXT           "当前频率",IDC_STATIC,16,268,37,13
+    GROUPBOX        "Static",IDC_STATIC,1,262,500,83
+    LTEXT           "当前频率",IDC_STATIC,6,282,31,8
+    LTEXT           "当前速度",IDC_STATIC,6,300,31,8
+    LTEXT           "测试线路",IDC_STATIC,6,318,31,8
+    LTEXT           "初始里程",IDC_STATIC,6,337,31,8
+    EDITTEXT        IDC_EDIT_FR,41,279,40,12,ES_AUTOHSCROLL
+    EDITTEXT        IDC_EDIT_CurSpeed,41,296,40,14,ES_AUTOHSCROLL
+    EDITTEXT        IDC_LINE_EDIT,41,315,56,14,ES_AUTOHSCROLL
+    EDITTEXT        IDC_DISTANCE_EDIT,41,334,56,12,ES_AUTOHSCROLL
+    LTEXT           "MHz",IDC_STATIC,82,281,13,8
+    LTEXT           "km/h",IDC_STATIC,82,297,17,8
+    LTEXT           "每格",IDC_STATIC,105,281,16,8
+    LTEXT           "车轮直径",IDC_STATIC,105,298,31,8
+    LTEXT           "统计概率",IDC_STATIC,105,317,31,8
+    LTEXT           "衰耗电平",IDC_STATIC,104,336,30,14
+    EDITTEXT        IDC_EDIT_GridDis,140,276,40,14,ES_AUTOHSCROLL
+    EDITTEXT        IDC_DIAMETER_EDIT,140,295,40,14,ES_AUTOHSCROLL | WS_DISABLED
+    COMBOBOX        IDC_RATE_COMBO,140,314,48,30,CBS_DROPDOWN | CBS_SORT | WS_VSCROLL | WS_TABSTOP
+    EDITTEXT        IDC_LOSSDB_EDIT,140,332,44,14,ES_AUTOHSCROLL
+    LTEXT           "KM",IDC_STATIC,181,279,9,8
+    LTEXT           "MM",IDC_STATIC,180,296,9,8
+    CONTROL         "",IDC_DIAMETER_SET,"msctls_updown32",UDS_ARROWKEYS,187,293,10,14
+    CONTROL         "",IDC_LOSSDB_SPIN,"msctls_updown32",UDS_ARROWKEYS,186,332,10,14
+    LTEXT           "当前里程",IDC_STATIC,203,278,31,8
+    LTEXT           "增减标志",IDC_STATIC,203,297,31,8
+    LTEXT           "维护电平",IDC_STATIC,203,316,31,8
+    LTEXT           "场强计状态",IDC_STATIC,203,335,38,14
+    EDITTEXT        IDC_EDIT_CurMileage,242,274,40,14,ES_AUTOHSCROLL
+    COMBOBOX        IDC_UPDOWN_COMBO,242,295,48,30,CBS_DROPDOWN | CBS_SORT | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        IDC_MAINTANCE_COMBO,242,314,48,30,CBS_DROPDOWN | CBS_SORT | WS_VSCROLL | WS_TABSTOP
+    EDITTEXT        IDC_CONTROLSTATUS,242,333,48,14,ES_AUTOHSCROLL
+    LTEXT           "KM",IDC_STATIC,283,275,9,8
+    LTEXT           "实时场强值",IDC_STATIC,297,278,38,8
+    LTEXT           "场强统计",IDC_STATIC,297,297,31,8
+    LTEXT           "测试补偿",IDC_STATIC,297,316,31,8
+    LTEXT           "存盘文件",IDC_STATIC,297,335,31,8
+    EDITTEXT        IDC_EDIT20,339,275,45,14,ES_AUTOHSCROLL
+    EDITTEXT        IDC_EDIT_CurDBValue,339,295,45,14,ES_AUTOHSCROLL
+    EDITTEXT        IDC_EDIT_DBBC,339,315,45,14,ES_AUTOHSCROLL
+    EDITTEXT        IDC_FILENAME_EDIT,339,331,154,12,ES_AUTOHSCROLL
+    LTEXT           "dB",IDC_STATIC,384,277,9,8
+    LTEXT           "dB",IDC_STATIC,384,297,9,8
+    LTEXT           "dB",IDC_STATIC,384,316,9,8
+    LTEXT           "估计速度",IDC_STATIC,403,279,31,8
+    LTEXT           "里程修正",IDC_STATIC,403,297,31,8
+    LTEXT           "文件序号",IDC_STATIC,403,315,31,8
+    EDITTEXT        IDC_SPEED_EDIT,438,276,40,14,ES_AUTOHSCROLL | WS_DISABLED
+    EDITTEXT        IDC_MODIFY_EDIT,438,294,40,14,ES_AUTOHSCROLL
+    EDITTEXT        IDC_FILENUM_EDIT,438,313,40,12,ES_AUTOHSCROLL
+    CONTROL         "",IDC_SPEED_SPIN,"msctls_updown32",UDS_ARROWKEYS,482,276,10,14
+    CONTROL         "",IDC_MODIFY_SPIN,"msctls_updown32",UDS_ARROWKEYS,482,294,10,14
+    CONTROL         "",IDC_SAVEFILE_SPIN,"msctls_updown32",UDS_ARROWKEYS,482,313,10,12
+    LISTBOX         IDC_INQUIRY_LIST,1,7,61,48,LBS_SORT | LBS_NOINTEGRALHEIGHT | WS_TABSTOP
 END
 
 IDD_PR100_DIALOG DIALOGEX 0, 0, 229, 275
@@ -267,10 +314,10 @@ BEGIN
 
     IDD_FST_FORM, DIALOG
     BEGIN
-        LEFTMARGIN, 7
-        RIGHTMARGIN, 539
+        LEFTMARGIN, 1
+        RIGHTMARGIN, 501
         TOPMARGIN, 7
-        BOTTOMMARGIN, 343
+        BOTTOMMARGIN, 345
     END
 
     IDD_PR100_DIALOG, DIALOG

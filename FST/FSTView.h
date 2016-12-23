@@ -11,6 +11,7 @@
 #include <fstream>
 using namespace std;
 #include <afxtempl.h>
+#include "afxwin.h"
 
 /*********************此处定义常量并添加注释********************/   //edit by zwbai 161221
 
@@ -117,6 +118,21 @@ private:
 	int currentSel;
 	int firstMapped;
 	int currentSavePos;
+public:
+	CString m_controlstatus;
+	float m_dbbcvalue;
+	CString m_diameter;
+	CString m_distance;
+	CString m_filename;
+	int m_filenum;
+	CString m_line;
+	int m_lossdb;
+	CString m_maintance;
+	int m_modify;
+	CString m_rate;
+	int m_speed;
+	CString m_updown;
+	CListBox m_inquiry_list;
 };
 
 
