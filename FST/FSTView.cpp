@@ -90,6 +90,19 @@ END_MESSAGE_MAP()
 
 CFSTView::CFSTView()
 	: CFormView(IDD_FST_FORM)
+	, m_controlstatus(_T(""))
+	, m_dbbcvalue(0)
+	, m_diameter(_T(""))
+	, m_distance(_T(""))
+	, m_filename(_T(""))
+	, m_filenum(0)
+	, m_line(_T(""))
+	, m_lossdb(0)
+	, m_maintance(_T(""))
+	, m_modify(0)
+	, m_rate(_T(""))
+	, m_speed(0)
+	, m_updown(_T(""))
 {
 	// TODO: 在此处添加构造代码
 
@@ -102,6 +115,20 @@ CFSTView::~CFSTView()
 void CFSTView::DoDataExchange(CDataExchange* pDX)
 {
 	CFormView::DoDataExchange(pDX);
+	DDX_Text(pDX, IDC_CONTROLSTATUS, m_controlstatus);
+	DDX_Text(pDX, IDC_EDIT_DBBC, m_dbbcvalue);
+	DDX_Text(pDX, IDC_DIAMETER_EDIT, m_diameter);
+	DDX_Text(pDX, IDC_DISTANCE_EDIT, m_distance);
+	DDX_Text(pDX, IDC_FILENAME_EDIT, m_filename);
+	DDX_Text(pDX, IDC_FILENUM_EDIT, m_filenum);
+	DDX_Text(pDX, IDC_LINE_EDIT, m_line);
+	DDX_Text(pDX, IDC_LOSSDB_EDIT, m_lossdb);
+	DDX_CBString(pDX, IDC_MAINTANCE_COMBO, m_maintance);
+	DDX_Text(pDX, IDC_MODIFY_EDIT, m_modify);
+	DDX_CBString(pDX, IDC_RATE_COMBO, m_rate);
+	DDX_Text(pDX, IDC_SPEED_EDIT, m_speed);
+	DDX_CBString(pDX, IDC_UPDOWN_COMBO, m_updown);
+	DDX_Control(pDX, IDC_INQUIRY_LIST, m_inquiry_list);
 }
 
 BOOL CFSTView::PreCreateWindow(CREATESTRUCT& cs)
