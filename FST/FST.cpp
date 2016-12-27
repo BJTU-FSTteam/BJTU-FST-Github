@@ -124,7 +124,7 @@ BOOL CFSTApp::InitInstance()
 		return FALSE;
 
 	// 唯一的一个窗口已初始化，因此显示它并对其进行更新
-	m_pMainWnd->ShowWindow(SW_SHOW);
+	m_pMainWnd->ShowWindow(SW_SHOWMAXIMIZED);
 	m_pMainWnd->UpdateWindow();
 	return TRUE;
 }

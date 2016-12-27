@@ -37,7 +37,15 @@ protected:  // 控件条嵌入成员
 protected:
 	afx_msg int OnCreate(LPCREATESTRUCT lpCreateStruct);
 	DECLARE_MESSAGE_MAP()
+private:
+	//add by sgw
+	//屏幕分辨率
+	int m_width;
+	int m_height;
+	//add end
 
+public:
+	void OnClose();
 };
 
 

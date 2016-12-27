@@ -69,7 +69,9 @@ END
 // Icon with lowest ID value placed first to ensure application icon
 // remains consistent on all systems.
 IDR_MAINFRAME           ICON                    "res\\FST.ico"
+
 IDR_FSTTYPE             ICON                    "res\\FSTDoc.ico"
+
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -77,6 +79,7 @@ IDR_FSTTYPE             ICON                    "res\\FSTDoc.ico"
 //
 
 IDR_MAINFRAME           BITMAP                  "res\\Toolbar.bmp"
+
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -180,7 +183,7 @@ IDD_FST_FORM DIALOGEX 0, 0, 553, 352
 STYLE DS_SETFONT | WS_CHILD
 FONT 10, "宋体", 400, 0, 0x0
 BEGIN
-    GROUPBOX        "Static",IDC_STATIC,1,262,500,83
+    GROUPBOX        "",IDC_STATIC_RANGE,1,262,500,83
     LTEXT           "当前频率",IDC_STATIC,6,282,31,8
     LTEXT           "当前速度",IDC_STATIC,6,300,31,8
     LTEXT           "测试线路",IDC_STATIC,6,318,31,8
