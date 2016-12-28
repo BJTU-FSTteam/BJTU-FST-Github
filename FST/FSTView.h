@@ -213,6 +213,8 @@ public:
 	afx_msg void OnFileOpen();
 	afx_msg void OnStatusMenu();
 	afx_msg void OnChangeDistanceEdit();
+	afx_msg void OnSelchangeUpdownCombo();
+	afx_msg void OnSelchangeMaintanceCombo();
 };
 
 

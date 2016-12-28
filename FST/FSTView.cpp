@@ -446,6 +446,8 @@ BEGIN_MESSAGE_MAP(CFSTView, CFormView)
 	ON_COMMAND(ID_FILE_OPEN, &CFSTView::OnFileOpen)
 	ON_COMMAND(IDC_STATUS_MENU, &CFSTView::OnStatusMenu)
 	ON_EN_CHANGE(IDC_DISTANCE_EDIT, &CFSTView::OnChangeDistanceEdit)
+	ON_CBN_SELCHANGE(IDC_UPDOWN_COMBO, &CFSTView::OnSelchangeUpdownCombo)
+	ON_CBN_SELCHANGE(IDC_MAINTANCE_COMBO, &CFSTView::OnSelchangeMaintanceCombo)
 END_MESSAGE_MAP()
 
 // CFSTView 构造/析构
@@ -641,7 +643,6 @@ void CFSTView::OnStartButton()
 	// TODO: Add your command handler code here
 	if (caiji_status == 1)
 		return;
-	Pr100ProcFlag = 1;
 	char pp[200];
 	int retv;
 	char tmps[5];
@@ -677,15 +678,13 @@ void CFSTView::OnStartButton()
 	pSampleArea = 0;
 	WorkAreaFlag = false;   //FALSE可读,TRUE 可写
 	SampleAreaFlag = true;  //FALSE表示可读,TRUE 可写
-	/********************以下代码现阶段注释，之后需要恢复*********************/  //Edit by zwbai 161222
-	// 	m_line.TrimLeft();
-	// 	m_line.TrimRight();
-	// 	if (m_line.GetLength()<2)
-	// 	{
-	// 		MessageBox("请输入测试线路!", NULL, MB_ICONWARNING);
-	// 		return;
-	// 	}
-	/********************以上代码现阶段注释，之后需要恢复*********************/
+	 m_line.TrimLeft();
+	 m_line.TrimRight();
+     if (m_line.GetLength()<2)
+	 	{
+	 		MessageBox(_T("请输入测试线路!"), NULL, MB_ICONWARNING);
+	 		return;
+	 	}
 
 
 	/********************以下代码段应为PC与原版适配器的信息交互，此处先注释，*********************///Edit by zwbai 161222
@@ -721,14 +720,13 @@ void CFSTView::OnStartButton()
 	currentSavePos = 0;
 	firstMapped = 0;
 
-	//OnSelchangeUpdownCombo();此处为增减标志combo消息相应函数，之后需要恢复
+	OnSelchangeUpdownCombo();
 	InitScreen();
 
 
 
 	caiji_status = 1;
 
-	/********************以下代码段目前无FORM相关窗口，此处先注释，*********************///Edit by zwbai 161222	
 	GetDlgItem(IDC_LINE_EDIT)->EnableWindow(FALSE);
  	GetDlgItem(IDC_DISTANCE_EDIT)->EnableWindow(FALSE);
 	GetDlgItem(IDC_DIAMETER_EDIT)->EnableWindow(FALSE);  //delete by zgliu 应南昌局要求，测试过程中可能需要修改
@@ -743,7 +741,6 @@ void CFSTView::OnStartButton()
  	GetDlgItem(IDC_EDIT20)->EnableWindow(FALSE);
  	SetDlgItemText(IDC_EDIT_FR, Pr100freq);				//输出当前测试频率 add by bzw 161121
 	GetDlgItem(IDC_CONTROLSTATUS)->EnableWindow(FALSE);
-	/********************以上代码段目前无FORM相关窗口，此处先注释，*********************///Edit by zwbai 161222	
 
 	AD_number = 0;
 	for (int i = 0; i<30720; i++)
@@ -768,6 +765,7 @@ void CFSTView::OnStartButton()
 	//delete by bzw 161129	 
 	readStatus = 1;
 	Pr100flag = 1;
+	Pr100ProcFlag = 1;
 	myThread = AfxBeginThread(MyThreadProc, NULL, THREAD_PRIORITY_HIGHEST);
 	myThread->m_bAutoDelete = TRUE;
 }
@@ -1965,8 +1963,8 @@ DWORD WINAPI CFSTView::RecvProc(LPVOID lpParameter)
 				//str.Format("FF %02x %02x %02x %02x %02x %02x %02x %02x",pView->TaxData[0],pView->TaxData[1],\
 														pView->TaxData[2],pView->TaxData[3],pView->TaxData[4],pView->TaxData[5],pView->nLevel[i],\
 						pView->nLevel[i+1]);
-//pView->SetDlgItemText(IDC_EDIT_TAX,str);  //显示用，可删除
-/*************************************************************/
+				//pView->SetDlgItemText(IDC_EDIT_TAX,str);  //显示用，可删除
+				/*************************************************************/
 				pView->pSampleArea += 16;
 
 			}
@@ -2020,8 +2018,8 @@ DWORD WINAPI CFSTView::RecvProc(LPVOID lpParameter)
 				//str.Format("FF %02x %02x %02x %02x %02x %02x %02x %02x",pView->TaxData[0],pView->TaxData[1],\
 														pView->TaxData[2],pView->TaxData[3],pView->TaxData[4],pView->TaxData[5],pView->nLevel[i],\
 						pView->nLevel[i+1]);
-//pView->SetDlgItemText(IDC_EDIT_TAX,str); //显示用，可删除
-/*************************************************************/
+				//pView->SetDlgItemText(IDC_EDIT_TAX,str); //显示用，可删除
+				/*************************************************************/
 
 			}
 
@@ -2904,4 +2902,192 @@ void CFSTView::OnChangeDistanceEdit()
 		pDC.SelectObject(pOldFont);
 
 	}
+}
+
+
+void CFSTView::OnSelchangeUpdownCombo()
+{
+	// TODO: 在此添加控件通知处理程序代码
+	if (UpdateData(TRUE) && m_updown.GetLength() > 3)
+	{
+		CClientDC pDC(this);
+		//pDC.SetROP2(R2_XORPEN);
+		pDC.SetTextColor(RGB(0xFF, 0x00, 0xFF));
+		CPen	myPen1(PS_SOLID, 1, RGB(0xFF, 0x00, 0xFF));
+		CPen	*pOldPen;
+		pOldPen = pDC.SelectObject(&myPen1);
+
+		CFont	myFont, *pOldFont;
+		myFont.CreateFont(18, 6, 0, 0, FW_NORMAL, 0, 0, 0, ANSI_CHARSET,
+			OUT_DEVICE_PRECIS, VARIABLE_PITCH | FF_ROMAN, PROOF_QUALITY, 0, "ROMAN");
+		pOldFont = pDC.SelectObject(&myFont);
+
+		if (offset > 0)
+		{
+			pDC.MoveTo(nDrawRangeXMin + offset / 2, 445);
+			pDC.LineTo(nDrawRangeXMin + offset / 2, 450);
+			pDC.MoveTo(nDrawRangeXMin + offset, 50);
+			pDC.LineTo(nDrawRangeXMin + offset, 450);
+		}
+
+		pDC.FillSolidRect(nDrawRangeXMin - 20, 455, nDrawRangeXMax - nDrawRangeXMin + 20, 55, 0xFFFFFF);
+
+		offset = 0;
+
+		startDis = atof(m_distance)*1000.0;
+		startKM = m_distance;
+		nextKM = _T("");
+
+		currentStation = 0 - 1;
+		currentName = _T("");
+		nextName = _T("");
+		currentCode = _T("");
+		nextCode = _T("");
+
+		firstMapped = 0;
+		const int nPix1KM = nPix500M * 2;  //每30Pix表示500M add by zgliu 2011.04.13
+
+		for (int i = 1; i <= stationCount; i++)
+		{
+			if (fabs(stationDis[i] * 1000.0 - startDis) < 100.0)
+			{
+				currentStation = i;
+				currentName = CString(stationName[i]);
+				currentCode.Format("%d", stationNum[i]);
+
+				if (m_updown.Find("增加") != 0 - 1)
+				{
+					nextKM.Format("%6.2f", stationDis[i + 1]);
+					nextName = CString(stationName[i + 1]);
+					nextCode.Format("%d", stationNum[i + 1]);
+					nextStation = i + 1;
+// 					KFnextstation = i + 1;
+					offset = (int)((stationDis[i + 1] - stationDis[i])*nPix1KM);
+					delta = 1;
+				}
+				else if (m_updown.Find("减少") != 0 - 1)
+				{
+					nextKM.Format("%6.2f", stationDis[i - 1]);
+					nextName = CString(stationName[i - 1]);
+					nextCode.Format("%d", stationNum[i - 1]);
+					nextStation = i - 1;
+// 					KFnextstation = i - 1;
+					offset = (int)((stationDis[i] - stationDis[i - 1])*nPix1KM);
+					delta = 0 - 1;
+				}
+
+				firstMapped = 1;
+				i = stationCount + 1;
+			}
+
+		}
+
+		if ((firstMapped == 0) && (m_updown.Find("增加") != 0 - 1))
+		{
+			for (int i = 1; i <= stationCount; i++)
+				if (stationDis[i] * 1000.0 > startDis)
+				{
+					currentStation = i - 1;
+					currentName = _T("");
+					currentCode = _T("");
+
+					nextKM.Format("%6.2f", stationDis[i]);
+					nextName = CString(stationName[i]);
+					nextCode.Format("%d", stationNum[i]);
+					nextStation = i;
+// 					KFnextstation = i;
+					offset = (int)((stationDis[i] - atof(startKM))*nPix1KM);
+					delta = 1;
+					i = stationCount + 1;
+				}
+		}
+		else if ((firstMapped == 0) && (m_updown.Find("减少") != 0 - 1))
+		{
+			for (int i = stationCount; i >= 1; i--)
+				if (stationDis[i] * 1000.0 < startDis)
+				{
+					currentStation = i + 1;
+					currentName = _T("");
+					currentCode = _T("");
+
+					nextKM.Format("%6.2f", stationDis[i]);
+					nextName = CString(stationName[i]);
+					nextCode.Format("%d", stationNum[i]);
+					nextStation = i;
+// 					KFnextstation = i;
+					offset = (int)((atof(startKM) - stationDis[i])*nPix1KM);
+					delta = 0 - 1;
+					i = 0;
+				}
+		}
+
+		pDC.TextOut(nDrawRangeXMin - 5 - 15, 460 + 10, startKM);
+		pDC.TextOut(nDrawRangeXMin - 5 + offset, 460 + 10, nextKM);
+
+		if (_T("") != currentName)
+		{
+			pDC.TextOut(nDrawRangeXMin - 5 - 15, 480 + 10, currentName + _T(" (") + currentCode + _T(")"));
+		}
+		else
+		{
+			pDC.TextOut(nDrawRangeXMin - 5 - 15, 480 + 10, _T(""));
+		}
+		pDC.TextOut(nDrawRangeXMin - 5 + offset, 480 + 10, nextName + _T(" (") + nextCode + _T(")"));
+
+		DisplayOthers(&pDC, startKM, nextKM);
+
+		// add by zgliu 2011.04.13 
+		// 每1KM显示一个刻度值
+		CFont myKMFont;
+		myKMFont.CreateFont(15, 5, 0, 0, FW_NORMAL, 0, 0, 0, ANSI_CHARSET,
+			OUT_DEVICE_PRECIS, VARIABLE_PITCH | FF_ROMAN, PROOF_QUALITY, 0, "ROMAN");
+		pOldFont = pDC.SelectObject(&myKMFont);
+		const int nDeltaKM = offset / nPix1KM;
+		CString strTempKM;
+		for (int i = 1; i <= nDeltaKM; ++i)
+		{
+			if (i <= (nKMDisplayNum + 1) / 2)
+			{
+				if (-1 != m_updown.Find(_T("增加")))
+				{
+					strTempKM.Format(_T("%0.2f"), atof(startKM) + i);
+				}
+				else if (-1 != m_updown.Find(_T("减少")))
+				{
+					strTempKM.Format(_T("%0.2f"), atof(startKM) - i);
+				}
+				pDC.SetTextColor(RGB(0x00, 0x00, 0x00));
+				pDC.TextOut(nDrawRangeXMin - 8 + nPix1KM*i, 455, strTempKM);
+			}
+		}
+		pDC.SelectObject(pOldFont);
+		// add end by zgliu 
+
+
+		if (offset > 0)
+		{
+			pDC.MoveTo(nDrawRangeXMin + offset / 2, 445);
+			pDC.LineTo(nDrawRangeXMin + offset / 2, 450);
+			pDC.MoveTo(nDrawRangeXMin + offset, 50);
+			pDC.LineTo(nDrawRangeXMin + offset, 450);
+		}
+
+		pDC.SelectObject(pOldPen);
+		pDC.SelectObject(pOldFont);
+
+	}
+}
+
+
+void CFSTView::OnSelchangeMaintanceCombo()
+{
+	// TODO: 在此添加控件通知处理程序代码
+	CString	preStr = m_maintance;
+
+	UpdateData(TRUE);
+
+	//	MessageBox(preStr+m_maintance);
+
+	if (preStr != m_maintance)
+		InitScreen();
 }
