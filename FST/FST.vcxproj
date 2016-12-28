@@ -192,6 +192,7 @@
     <ClInclude Include="FST.h" />
     <ClInclude Include="FSTDoc.h" />
     <ClInclude Include="FSTView.h" />
+    <ClInclude Include="Inquiry.h" />
     <ClInclude Include="MainFrm.h" />
     <ClInclude Include="PR100Setting.h" />
     <ClInclude Include="Resource.h" />
@@ -202,6 +203,7 @@
     <ClCompile Include="FST.cpp" />
     <ClCompile Include="FSTDoc.cpp" />
     <ClCompile Include="FSTView.cpp" />
+    <ClCompile Include="Inquiry.cpp" />
     <ClCompile Include="MainFrm.cpp" />
     <ClCompile Include="PR100Setting.cpp" />
     <ClCompile Include="stdafx.cpp">

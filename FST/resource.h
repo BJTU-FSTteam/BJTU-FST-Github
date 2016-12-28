@@ -9,6 +9,7 @@
 #define IDR_MAINFRAME                   128
 #define IDR_FSTTYPE                     130
 #define IDD_PR100_DIALOG                310
+#define IDD_INQUIRY_DIALOG              313
 #define IDC_COMBO_Frequency             1000
 #define IDC_LU_EDIT                     1001
 #define IDC_LD_EDIT                     1002
@@ -42,6 +43,8 @@
 #define IDC_LIST2                       1030
 #define IDC_INQUIRY_LIST                1030
 #define IDC_STATIC_RANGE                1031
+#define IDC_STATUS_LIST                 1032
+#define IDC_FNAME_EDIT                  1033
 #define ID_PR100_SETTING                32771
 #define ID_START_BUTTON                 32772
 #define ID_STOP_BUTTON                  32773
@@ -53,9 +56,9 @@
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
-#define _APS_NEXT_RESOURCE_VALUE        313
+#define _APS_NEXT_RESOURCE_VALUE        315
 #define _APS_NEXT_COMMAND_VALUE         32777
-#define _APS_NEXT_CONTROL_VALUE         1032
+#define _APS_NEXT_CONTROL_VALUE         1034
 #define _APS_NEXT_SYMED_VALUE           310
 #endif
 #endif
