@@ -443,6 +443,9 @@ BEGIN_MESSAGE_MAP(CFSTView, CFormView)
 	ON_COMMAND(ID_PR100_SETTING, &CFSTView::OnPr100Setting)
 	ON_COMMAND(ID_MODE_BUTTON, &CFSTView::OnModeButton)
 	ON_BN_CLICKED(IDC_STATIC_RANGE, &CFSTView::OnBnClickedStaticRange)
+	ON_COMMAND(ID_FILE_OPEN, &CFSTView::OnFileOpen)
+	ON_COMMAND(IDC_STATUS_MENU, &CFSTView::OnStatusMenu)
+	ON_EN_CHANGE(IDC_DISTANCE_EDIT, &CFSTView::OnChangeDistanceEdit)
 END_MESSAGE_MAP()
 
 // CFSTView 构造/析构
@@ -2269,4 +2272,636 @@ void CFSTView::OnDraw(CDC* pDC)
 void CFSTView::OnBnClickedStaticRange()
 {
 	// TODO: 在此添加控件通知处理程序代码
+}
+
+
+void CFSTView::OnFileOpen()
+{
+	// TODO: 在此添加命令处理程序代码
+	if (caiji_status)
+	{
+		MessageBox(_T("请先停止测试!"), _T("操作错误"));
+		return;
+	}
+	if (firstTime == 1)
+	{
+		CClientDC pDC(this);
+		CRect rcClip;
+		GetClientRect(&rcClip);
+		pDC.FillSolidRect(rcClip.left, rcClip.top, rcClip.right, rcClip.bottom - 140, 0xFFFFFF);
+		firstTime = 0;
+	}
+	CFileDialog dlgFile(TRUE, "TXT", filename, OFN_HIDEREADONLY | OFN_NOCHANGEDIR, "(TXT) *.txt |*.txt||", this);
+	CString strTemp = m_strCurDirectory.c_str();
+	strTemp += _T("\\里程数据库");
+	dlgFile.m_ofn.lpstrInitialDir = strTemp;
+	if (dlgFile.DoModal() == IDOK)
+	{
+		CString	tmp_name = dlgFile.GetPathName();
+		CString	tt_name = dlgFile.GetFileName();
+
+		//add by zgliu 2011.03.18
+		// 	  if (-1 != tmp_name.Find(_T("控发")))
+		// 	  {
+		// 		  MessageBox(_T("您选择的文件不是测试线路的里程库文件!\n请确认已选中正确的里程库文件!"), _T("操作错误"), MB_ICONWARNING);
+		// 		  return;
+		// 	  } 
+		//add end by zgliu 
+
+		int	pos = tmp_name.Find(tt_name);
+		dirName = tmp_name.Left(pos);
+		/*int gpscorcount = ReadGPSCor(tmp_name);
+				if (gpscorcount > 0)
+					gpscor_flag = 1;
+				else
+					gpscor_flag = 0;
+		*/
+		int count = ReadLib(tmp_name);
+		if (count > 0)
+		{
+			stationCount = count;
+			filename = tmp_name;
+
+			librayDlg.stationCount = stationCount + zhongjiCount + diantaiCount + suidaoCount + zhifangCount + qujiantaiCount;
+			librayDlg.filename = filename;
+
+			int  index = 0;
+			for (int kk = 1; kk <= stationCount; kk++)
+			{
+				index++;
+				strcpy(librayDlg.stationName[kk], stationName[index]);
+				librayDlg.stationDis[kk] = stationDis[index];
+				librayDlg.stationNum[kk] = stationNum[index];
+				librayDlg.type[kk] = 0;
+			}
+
+			index = 0;
+			for (int kk = stationCount + 1; kk <= stationCount + zhongjiCount; kk++)
+			{
+				index++;
+				strcpy(librayDlg.stationName[kk], zhongjiName[index]);
+				librayDlg.stationDis[kk] = zhongjiDis[index];
+				librayDlg.stationNum[kk] = zhongjiCode[index];
+				librayDlg.type[kk] = 1;
+
+			}
+
+			index = 0;
+			for (int kk = stationCount + zhongjiCount + 1; kk <= stationCount + zhongjiCount + diantaiCount; kk++)
+			{
+				index++;
+				strcpy(librayDlg.stationName[kk], diantaiName[index]);
+				librayDlg.stationDis[kk] = diantaiDis[index];
+				librayDlg.stationNum[kk] = diantaiCode[index];
+				librayDlg.type[kk] = 2;
+
+			}
+
+			index = 0;
+			for (int kk = stationCount + zhongjiCount + diantaiCount + 1; kk <= stationCount + zhongjiCount + diantaiCount + suidaoCount; kk++)
+			{
+				index++;
+				strcpy(librayDlg.stationName[kk], suidaoName[index]);
+				librayDlg.stationDis[kk] = suidaoDis[index];
+				librayDlg.stationNum[kk] = 0;
+				librayDlg.type[kk] = 3;
+
+			}
+
+			index = 0;
+			int nTempNum = stationCount + zhongjiCount + diantaiCount + suidaoCount;
+			for (int kk = nTempNum + 1; kk <= nTempNum + zhifangCount; ++kk)
+			{
+				index++;
+				strcpy(librayDlg.stationName[kk], zhifangName[index]);
+				librayDlg.stationDis[kk] = zhifangDis[index];
+				librayDlg.stationNum[kk] = zhifangCode[index];
+				librayDlg.type[kk] = 4;
+			}
+
+			index = 0;
+			nTempNum = stationCount + zhongjiCount + diantaiCount + suidaoCount + zhifangCount;
+			for (int kk = nTempNum + 1; kk <= nTempNum + qujiantaiCount; ++kk)
+			{
+				index++;
+				strcpy(librayDlg.stationName[kk], qujiantaiName[index]);
+				librayDlg.stationDis[kk] = qujiantaiDis[index];
+				librayDlg.stationNum[kk] = qujiantaiCode[index];
+				librayDlg.type[kk] = 5;
+			}
+
+
+
+
+			if (librayDlg.DoModal() == IDOK)
+			{
+				stationCount = 0;
+				zhongjiCount = 0;
+				diantaiCount = 0;
+				suidaoCount = 0;
+				zhifangCount = 0;
+				qujiantaiCount = 0;
+
+
+				for (int ii = 0; ii < 512; ii++)
+				{
+					strcpy(stationName[ii], "");
+					stationDis[ii] = 0.0;
+					stationNum[ii] = 0;
+
+					strcpy(zhongjiName[ii], "");
+					zhongjiDis[ii] = 0.0;
+					zhongjiCode[ii] = 0;
+
+					strcpy(diantaiName[ii], "");
+					diantaiDis[ii] = 0.0;
+					diantaiCode[ii] = 0;
+
+					strcpy(suidaoName[ii], "");
+					suidaoDis[ii] = 0.0;
+
+					strcpy(zhifangName[ii], "");
+					zhifangDis[ii] = 0.0;
+					zhifangCode[ii] = 0;
+
+					strcpy(qujiantaiName[ii], "");
+					qujiantaiDis[ii] = 0.0;
+					qujiantaiCode[ii] = 0;
+				}
+
+				for (int kk = 1; kk <= librayDlg.stationCount; kk++)
+				{
+					if (librayDlg.type[kk] == 0)
+					{
+						stationCount++;
+						strcpy(stationName[stationCount], librayDlg.stationName[kk]);
+						stationDis[stationCount] = librayDlg.stationDis[kk];
+						stationNum[stationCount] = librayDlg.stationNum[kk];
+					}
+					else if (librayDlg.type[kk] == 1)
+					{
+						zhongjiCount++;
+						strcpy(zhongjiName[zhongjiCount], librayDlg.stationName[kk]);
+						zhongjiDis[zhongjiCount] = librayDlg.stationDis[kk];
+						zhongjiCode[zhongjiCount] = librayDlg.stationNum[kk];
+					}
+					else if (librayDlg.type[kk] == 2)
+					{
+						diantaiCount++;
+						strcpy(diantaiName[diantaiCount], librayDlg.stationName[kk]);
+						diantaiDis[diantaiCount] = librayDlg.stationDis[kk];
+						diantaiCode[diantaiCount] = librayDlg.stationNum[kk];
+					}
+					else if (librayDlg.type[kk] == 3)
+					{
+						suidaoCount++;
+						strcpy(suidaoName[suidaoCount], librayDlg.stationName[kk]);
+						suidaoDis[suidaoCount] = librayDlg.stationDis[kk];
+					}
+					else if (4 == librayDlg.type[kk])
+					{
+						zhifangCount++;
+						strcpy(zhifangName[zhifangCount], librayDlg.stationName[kk]);
+						zhifangDis[zhifangCount] = librayDlg.stationDis[kk];
+						zhifangCode[zhifangCount] = librayDlg.stationNum[kk];
+					}
+					else if (5 == librayDlg.type[kk])
+					{
+						qujiantaiCount++;
+						strcpy(qujiantaiName[qujiantaiCount], librayDlg.stationName[kk]);
+						qujiantaiDis[qujiantaiCount] = librayDlg.stationDis[kk];
+						qujiantaiCode[qujiantaiCount] = librayDlg.stationNum[kk];
+					}
+
+				}
+
+				currentSel = librayDlg.selNum;
+
+				if (currentSel > 0)
+				{
+					m_distance.Format("%.2f", librayDlg.stationDis[currentSel]);
+					int	len = tt_name.GetLength();
+
+					m_line = tt_name.Left(len - 4);
+					m_filename = tt_name.Left(len - 6) + "000.dat";
+					m_filenum = 0;
+					UpdateData(FALSE);
+
+					//		OnSelchangeLineCombo() ;
+
+					OnChangeDistanceEdit();
+					InitScreen();
+
+					//		MessageBox("请选择数据文件序号！",NULL, MB_ICONEXCLAMATION);
+					OnStatusMenu();
+				}
+			}
+			//add by zgliu 2011.03.06
+			Invalidate(TRUE);
+
+		}
+		else if (count == 0)
+		{
+			MessageBox("错误文件！", NULL, MB_ICONERROR);
+			return;
+		}
+		Sleep(200);
+		InitScreen();	 //2005-6-2
+
+						 // add by zgliu 2011.03.10
+		m_bReadLib = true;
+	}
+}
+
+
+int	CFSTView::ReadLib(CString fname)
+{
+	//starts from the index 1
+	char	title[40];
+	FILE	*fp;
+
+	fp = fopen(fname, "r+t");
+
+	if (fp == NULL)
+		return 0;
+
+	stationCount = 0;
+	zhongjiCount = 0;
+	diantaiCount = 0;
+	suidaoCount = 0;
+	zhifangCount = 0;
+	qujiantaiCount = 0;
+
+	for (int ii = 0; ii < 512; ii++)
+	{
+		strcpy(stationName[ii], "");
+		stationDis[ii] = 0.0;
+		stationNum[ii] = 0;
+
+		strcpy(zhongjiName[ii], "");
+		zhongjiDis[ii] = 0.0;
+		zhifangCode[ii] = 0;
+
+		strcpy(diantaiName[ii], "");
+		diantaiDis[ii] = 0.0;
+		diantaiCode[ii] = 0;
+
+		strcpy(suidaoName[ii], "");
+		suidaoDis[ii] = 0.0;
+
+		strcpy(zhifangName[ii], "");
+		zhifangDis[ii] = 0.0;
+		zhifangCode[ii] = 0;
+
+		strcpy(qujiantaiName[ii], "");
+		qujiantaiDis[ii] = 0.0;
+		qujiantaiCode[ii] = 0;
+	}
+
+	//First Line is title
+	fscanf(fp, "%s", title);
+	fscanf(fp, "%s", title);
+	fscanf(fp, "%s", title);
+	fscanf(fp, "%s", title);
+
+	char		name[12];
+	double	dis = 0.0 - 1.0;
+	int       num = 0 - 1;
+	int       type = 0 - 1;
+
+	while (!feof(fp))
+	{
+		strcpy(name, "");
+		dis = 0.0 - 1.0;
+		num = 0 - 1;
+		type = 0 - 1;
+
+		fscanf(fp, "%s", name);
+		fscanf(fp, "%lf", &dis);
+		fscanf(fp, "%d", &num);
+		fscanf(fp, "%d", &type);
+
+		//		char  pp[90];
+		//	    sprintf(pp,"%s  %lf  %d  %d",name,dis,num,type);
+		//		MessageBox(pp);
+
+		//Station
+		if (type == 0)
+		{
+			stationCount++;
+			strcpy(stationName[stationCount], name);
+			stationDis[stationCount] = dis;
+			stationNum[stationCount] = num;
+		}
+		else if (type == 1)    //Zhongji
+		{
+			zhongjiCount++;
+			strcpy(zhongjiName[zhongjiCount], name);
+			zhongjiDis[zhongjiCount] = dis;
+			zhongjiCode[zhongjiCount] = num;
+		}
+		else if (type == 2)   	//DianTai
+		{
+			diantaiCount++;
+			strcpy(diantaiName[diantaiCount], name);
+			diantaiDis[diantaiCount] = dis;
+			diantaiCode[diantaiCount] = num;
+		}
+		else if (type == 3)  	//SuiDao
+		{
+			suidaoCount++;
+			strcpy(suidaoName[suidaoCount], name);
+			suidaoDis[suidaoCount] = dis;
+		}
+		else if (4 == type) //ZhiFangZhan
+		{
+			zhifangCount++;
+			strcpy(zhifangName[zhifangCount], name);
+			zhifangDis[zhifangCount] = dis;
+			zhifangCode[zhifangCount] = num;
+		}
+		else if (5 == type) //QuJianTai
+		{
+			qujiantaiCount++;
+			strcpy(qujiantaiName[qujiantaiCount], name);
+			qujiantaiDis[qujiantaiCount] = dis;
+			qujiantaiCode[qujiantaiCount] = num;
+		}
+	}
+	fclose(fp);
+
+	return stationCount;
+}
+
+
+void CFSTView::OnStatusMenu()
+{
+	// TODO: 在此添加命令处理程序代码
+	if (UpdateData(TRUE))
+	{
+		if (m_line.GetLength() < 6)
+		{
+			MessageBox("请先选择线路!", "操作错误", MB_ICONEXCLAMATION);
+			return;
+		}
+
+		char  pp[180];
+		int   len = m_line.GetLength();
+		sprintf(pp, "%s%s???.dat", dirName, m_line.Left(len - 2));
+
+		m_inquiry_list.ResetContent();
+		if (DlgDirList(pp, m_inquiry_list.GetDlgCtrlID(), 0, DDL_READWRITE) == 0)
+		{
+			MessageBox("此线路无测试数据!", "", MB_ICONEXCLAMATION);
+			UpdateData(FALSE);
+			return;
+		}
+
+		int totalFiles = m_inquiry_list.GetCount();
+		if (totalFiles < 1)
+		{
+			MessageBox("此线路无测试数据!", NULL, MB_ICONEXCLAMATION);
+			UpdateData(FALSE);
+			return;
+		}
+
+
+		if (m_inquiry_list.GetCount()>0)
+		{
+			int totalFiles = m_inquiry_list.GetCount();
+
+			CString curFilename = _T("");
+			int		i = 0, dataLength = 0;
+			FILE	*fp;
+			char	pp[80];
+			int		itemNum = 0;
+
+			for (int index = 0; index < totalFiles; index++)
+			{
+				m_inquiry_list.GetText(index, curFilename);
+
+				if (index == totalFiles - 1)
+				{
+					CString  tt1 = _T("");
+					CString  tt2 = _T("");
+					curFilename.MakeUpper();
+					int Pos = curFilename.Find(".DAT");
+					curFilename.MakeLower();
+					int fNum = atoi(curFilename.Mid(Pos - 3, Pos));
+
+					tt1.Format("%03d.dat", fNum + 1);
+					tt2 = curFilename.Left(Pos - 3);
+
+					m_filenum = fNum + 1;
+					m_filename.Format("%s%s", tt2, tt1);
+					UpdateData(FALSE);
+				}
+
+
+				if ((fp = fopen(curFilename, "r+b")) != NULL)
+				{
+					dataLength = fread(tmpData, sizeof(dataType), 30720, fp);
+
+					if (tmpData[0].curPos > tmpData[1].curPos)
+					{
+						sprintf(pp, "%13s    上行    %6.1f ---> %-6.1f", curFilename, tmpData[0].curPos / 1000.0, tmpData[dataLength - 1].curPos / 1000.0);
+						strcpy(inquiryDlg.item[itemNum++], pp);
+					}
+
+					else if (tmpData[0].curPos < tmpData[1].curPos)
+					{
+						sprintf(pp, "%13s    下行    %6.1f ---> %-6.1f", curFilename, tmpData[0].curPos / 1000.0, tmpData[dataLength - 1].curPos / 1000.0);
+						strcpy(inquiryDlg.item[itemNum++], pp);
+					}
+					fclose(fp);
+				}
+			}  //end of for
+
+			inquiryDlg.itemNum = itemNum;
+			if (itemNum > 0)
+				inquiryDlg.DoModal();
+		}
+	}
+}
+
+
+void CFSTView::OnChangeDistanceEdit()
+{
+	// TODO:  如果该控件是 RICHEDIT 控件，它将不
+	// 发送此通知，除非重写 CFormView::OnInitDialog()
+	// 函数并调用 CRichEditCtrl().SetEventMask()，
+	// 同时将 ENM_CHANGE 标志“或”运算到掩码中。
+
+	// TODO:  在此添加控件通知处理程序代码
+	if (UpdateData(TRUE) && m_updown.GetLength() > 3)
+	{
+		CClientDC pDC(this);
+		//???	pDC.SetROP2(R2_XORPEN);
+		pDC.SetTextColor(RGB(0xFF, 0x00, 0xFF));
+		CPen	myPen1(PS_SOLID, 1, RGB(0xFF, 0x00, 0xFF));
+		CPen	*pOldPen;
+		pOldPen = pDC.SelectObject(&myPen1);
+
+		CFont	myFont, *pOldFont;
+		myFont.CreateFont(18, 6, 0, 0, FW_NORMAL, 0, 0, 0, ANSI_CHARSET,
+			OUT_DEVICE_PRECIS, VARIABLE_PITCH | FF_ROMAN, PROOF_QUALITY, 0, "ROMAN");
+		pOldFont = pDC.SelectObject(&myFont);
+
+
+		if (offset > 0)
+		{
+			pDC.MoveTo(nDrawRangeXMin + offset / 2, 445);
+			pDC.LineTo(nDrawRangeXMin + offset / 2, 450);
+			pDC.MoveTo(nDrawRangeXMin + offset, 50);
+			pDC.LineTo(nDrawRangeXMin + offset, 450);
+		}
+
+		pDC.FillSolidRect(nDrawRangeXMin - 20, 455, nDrawRangeXMax - nDrawRangeXMin + 20, 55, 0xFFFFFF);
+
+		offset = 0;
+
+		startDis = atof(m_distance)*1000.0;
+		startKM = m_distance;
+		nextKM = _T("");
+
+		currentStation = 0 - 1;
+		currentName = _T("");
+		nextName = _T("");
+		currentCode = _T("");
+		nextCode = _T("");
+
+		firstMapped = 0;
+		const int nPix1KM = nPix500M * 2;  //每30Pix表示500M add by zgliu 2011.04.13
+
+		for (int i = 1; i <= stationCount; i++)
+		{
+			if (fabs(stationDis[i] * 1000.0 - startDis) < 100.0)
+			{
+				currentStation = i;
+				currentName = CString(stationName[i]);
+				currentCode.Format("%d", stationNum[i]);
+
+				if (m_updown.Find("增加") != 0 - 1)
+				{
+					nextKM.Format("%6.2f", stationDis[i + 1]);
+					nextName = CString(stationName[i + 1]);
+					nextCode.Format("%d", stationNum[i + 1]);
+					nextStation = i + 1;
+// 					KFnextstation = i + 1;  // add by shao 2011.03.08
+					offset = (int)((stationDis[i + 1] - stationDis[i])*nPix1KM);
+					delta = 1;
+				}
+				else if (m_updown.Find("减少") != 0 - 1)
+				{
+					nextKM.Format("%6.2f", stationDis[i - 1]);
+					nextName = CString(stationName[i - 1]);
+					nextCode.Format("%d", stationNum[i - 1]);
+					nextStation = i - 1;
+// 					KFnextstation = i - 1;  // add by shao 2011.03.08
+					offset = (int)((stationDis[i] - stationDis[i - 1])*nPix1KM);
+					delta = 0 - 1;
+				}
+
+				firstMapped = 1;
+				i = stationCount + 1;
+			}
+
+		}
+
+		if ((firstMapped == 0) && (m_updown.Find("增加") != 0 - 1))
+		{
+			for (int i = 1; i <= stationCount; i++)
+				if (stationDis[i] * 1000.0 > startDis)
+				{
+					currentStation = i - 1;
+					currentName = _T("");
+					currentCode = _T("");
+
+					nextKM.Format("%6.2f", stationDis[i]);
+					nextName = CString(stationName[i]);
+					nextCode.Format("%d", stationNum[i]);
+					nextStation = i;
+// 					KFnextstation = i;   // add by shao 2011.03.08
+					offset = (int)((stationDis[i] - atof(startKM))*nPix1KM);
+					delta = 1;
+					i = stationCount + 1;
+				}
+		}
+		else if ((firstMapped == 0) && (m_updown.Find("减少") != 0 - 1))
+		{
+			for (int i = stationCount; i >= 1; i--)
+			{
+				if (stationDis[i] * 1000.0 < startDis)
+				{
+					currentStation = i + 1;
+					currentName = _T("");
+					currentCode = _T("");
+
+					nextKM.Format("%6.2f", stationDis[i]);
+					nextName = CString(stationName[i]);
+					nextCode.Format("%d", stationNum[i]);
+					nextStation = i;
+// 					KFnextstation = i;  // add by shao 2011.03.08
+					offset = (int)((atof(startKM) - stationDis[i])*nPix1KM);
+					delta = 0 - 1;
+					i = 0;
+				}
+			}
+		}
+
+		pDC.TextOut(nDrawRangeXMin - 5 - 15, 460 + 10, startKM);
+		pDC.TextOut(nDrawRangeXMin - 5 + offset, 460 + 10, nextKM);
+
+		if (_T("") != currentName)
+		{
+			pDC.TextOut(nDrawRangeXMin - 5 - 15, 480 + 10, currentName + _T(" (") + currentCode + _T(")"));
+		}
+		else
+		{
+			pDC.TextOut(nDrawRangeXMin - 5 - 15, 480 + 10, _T(""));
+		}
+		pDC.TextOut(nDrawRangeXMin - 5 + offset, 480 + 10, nextName + _T(" (") + nextCode + _T(")"));
+
+		DisplayOthers(&pDC, startKM, nextKM);
+
+		// add by zgliu 2011.04.13 
+		// 每1KM显示一个刻度值
+		CFont myKMFont;
+		myKMFont.CreateFont(15, 5, 0, 0, FW_NORMAL, 0, 0, 0, ANSI_CHARSET,
+			OUT_DEVICE_PRECIS, VARIABLE_PITCH | FF_ROMAN, PROOF_QUALITY, 0, "ROMAN");
+		pOldFont = pDC.SelectObject(&myKMFont);
+		const int nDeltaKM = offset / nPix1KM;
+		CString strTempKM;
+		for (int i = 1; i <= nDeltaKM; ++i)
+		{
+			if (i <= (nKMDisplayNum + 1) / 2)
+			{
+				if (-1 != m_updown.Find(_T("增加")))
+				{
+					strTempKM.Format(_T("%0.2f"), atof(startKM) + i);
+				}
+				else if (-1 != m_updown.Find(_T("减少")))
+				{
+					strTempKM.Format(_T("%0.2f"), atof(startKM) - i);
+				}
+				pDC.SetTextColor(RGB(0x00, 0x00, 0x00));
+				pDC.TextOut(nDrawRangeXMin - 8 + nPix1KM*i, 455, strTempKM);
+			}
+		}
+		pDC.SelectObject(pOldFont);
+		// add end by zgliu 
+
+
+		if (offset > 0)
+		{
+			pDC.MoveTo(nDrawRangeXMin + offset / 2, 445);
+			pDC.LineTo(nDrawRangeXMin + offset / 2, 450);
+			pDC.MoveTo(nDrawRangeXMin + offset, 50);
+			pDC.LineTo(nDrawRangeXMin + offset, 450);
+		}
+
+		pDC.SelectObject(pOldPen);
+		pDC.SelectObject(pOldFont);
+
+	}
 }

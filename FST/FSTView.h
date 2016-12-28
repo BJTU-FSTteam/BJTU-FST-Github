@@ -12,6 +12,9 @@
 using namespace std;
 #include <afxtempl.h>
 #include "afxwin.h"
+#include "Inquiry.h"
+#include "Libray.h"
+#include "FSTDoc.h"
 
 
 
@@ -153,9 +156,19 @@ private:
 	};
 private:
 	CWinThread*	myThread;
-	int caiji_status;
+	int			caiji_status;
 	CString		dirName;
+	CLibray		librayDlg;
+	Inquiry		inquiryDlg;
+	dataType	tmpData[30720];
 
+	char		lineName[256][16];
+	char		lineFile[256][8];
+private:
+	//int		ReadGPSCor(CString fname); 
+	int		ReadLib(CString fname);
+	int		ReadLineName(CString fname);
+	void	InitScreen();
 public:
 	bool StartTestFlag;
 	int selftestStatus;
@@ -178,7 +191,6 @@ public:
 	int			m_speed;
 	CString		m_updown;
 	CListBox	m_inquiry_list;
-	void InitScreen();
 	void OnDraw(CDC* pDC);
 	static BOOL CALLBACK EnumChildProc(HWND hwndChild, LPARAM lParam);
 	float       m_fRealTimeDB;             //实时场强值
@@ -198,6 +210,9 @@ private:
 public:
 //	void variableInti();
 	afx_msg void OnBnClickedStaticRange();
+	afx_msg void OnFileOpen();
+	afx_msg void OnStatusMenu();
+	afx_msg void OnChangeDistanceEdit();
 };
 
 

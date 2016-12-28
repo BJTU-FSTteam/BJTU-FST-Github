@@ -23,13 +23,27 @@ IMPLEMENT_DYNAMIC(CLibray, CDialog)
 
 CLibray::CLibray(CWnd* pParent /*=NULL*/)
 	: CDialog(IDD_LIBRAY_DIALOG, pParent)
-	, m_distance(0)
+	, m_distance(0.0)
 	, m_no(0)
 	, m_number(0)
 	, m_station(_T(""))
-	, m_type(0)
+	, m_type(-1)
 {
+	for (int ii = 0; ii < 512; ii++)
+	{
+		strcpy(stationName[ii], "");
+		stationDis[ii] = 0.0;
+		stationNum[ii] = 0;
+		type[ii] = 0;
 
+		strcpy(stationName1[ii], "");
+		stationDis1[ii] = 0.0;
+		stationNum1[ii] = 0;
+		type1[ii] = 0;
+	}
+
+	selNum = 0 - 1;
+	filename = _T("");
 }
 
 CLibray::~CLibray()
@@ -58,6 +72,8 @@ BEGIN_MESSAGE_MAP(CLibray, CDialog)
 	ON_BN_CLICKED(IDC_SAVEDISK_BUTTON, &CLibray::OnBnClickedSavediskButton)
 	ON_LBN_SELCHANGE(IDC_LIB_LIST, &CLibray::OnLbnSelchangeLibList)
 	ON_BN_CLICKED(IDC_SAVEAS_BUTTON, &CLibray::OnBnClickedSaveasButton)
+	ON_EN_CHANGE(IDC_DISTANCE_EDIT, &CLibray::OnEnChangeDistanceEdit)
+	ON_EN_CHANGE(IDC_DISTANCE_EDIT, &CLibray::OnEnChangeDistanceEdit)
 END_MESSAGE_MAP()
 
 
@@ -484,4 +500,84 @@ void CLibray::OnBnClickedSaveasButton()
 				filename = tmp_name;
 			}
 	}
+}
+
+
+//void CLibray::OnEnChangeDistanceEdit()
+//{
+//	// TODO:  如果该控件是 RICHEDIT 控件，它将不
+//	// 发送此通知，除非重写 CDialog::OnInitDialog()
+//	// 函数并调用 CRichEditCtrl().SetEventMask()，
+//	// 同时将 ENM_CHANGE 标志“或”运算到掩码中。
+//
+//	// TODO:  在此添加控件通知处理程序代码
+//}
+
+
+void CLibray::OnEnChangeDistanceEdit()
+{
+	// TODO:  如果该控件是 RICHEDIT 控件，它将不
+	// 发送此通知，除非重写 CDialog::OnInitDialog()
+	// 函数并调用 CRichEditCtrl().SetEventMask()，
+	// 同时将 ENM_CHANGE 标志“或”运算到掩码中。
+
+	// TODO:  在此添加控件通知处理程序代码
+}
+
+
+BOOL CLibray::OnInitDialog()
+{
+	CDialog::OnInitDialog();
+
+	// TODO: Add extra initialization here
+
+	int	i;
+	char    	pp[120];
+
+	m_lib_list.SetTabStops(40);
+
+	m_lib_list.ResetContent();
+
+	sprintf(pp, " 序号\t车站\t里程标\t站编号\t类型");
+	m_lib_list.AddString(pp);
+
+
+	modified = 0;
+
+	if (stationCount > 0)
+	{
+		m_no = 1;
+		m_station = stationName[1];
+		m_distance = stationDis[1];
+		m_number = stationNum[1];
+		m_type = type[1];
+
+		UpdateData(FALSE);
+
+		//		strcat(stationName[1],"      ");
+
+		for (i = 1; i <= stationCount; i++)
+		{
+			sprintf(pp, " %03d\t%s\t%0.2f%\t%d\t%d",
+				i, stationName[i], stationDis[i], stationNum[i], type[i]);
+
+			m_lib_list.AddString(pp);
+		}
+
+		m_lib_list.SetCurSel(1);
+		selNum = 1;
+	}
+	else if (stationCount == 0)
+	{
+		m_no = 1;
+		m_station = _T("");
+		m_distance = 0.0;
+		m_number = 1;
+		m_type = 0;
+
+		UpdateData(FALSE);
+	}
+
+
+	return TRUE;
 }

@@ -64,4 +64,7 @@ public:
 	afx_msg void OnLbnSelchangeLibList();
 
 	afx_msg void OnBnClickedSaveasButton();
+//	afx_msg void OnEnChangeDistanceEdit();
+	afx_msg void OnEnChangeDistanceEdit();
+	BOOL OnInitDialog();
 };
