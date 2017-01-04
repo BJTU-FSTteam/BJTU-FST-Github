@@ -14,9 +14,9 @@
 #include "PR100Setting.h"
 #include "MainFrm.h"
 #include "math.h"
+#include "conio.h"
 #include <stdio.h>
 #include <iostream>
-
 using namespace std;
 extern CFSTApp theApp;
 //extern CStatusBar  m_wndStatusBar;
@@ -667,11 +667,11 @@ void CFSTView::OnStartButton()
 	pRecvParam->hwnd = m_hWnd;
 	pRecvParam->m_pView = this;
 	HANDLE hThread = CreateThread(NULL, 0, RecvProc, (LPVOID)pRecvParam, 0, NULL);
-	if (!InitPR100flag)
+	/*if (!InitPR100flag)
 	{
-		MessageBox(_T("      请设置场强仪！"));
+		MessageBox(_T("      请设置场强仪！"));				//pr100模拟程序有问题，此处先注释 Edit by zwbai 161228
 		return;
-	}
+	}*/
 	stopPR100 = false;
 	starRecordLevel = FALSE;
 	pWorkArea = 0;
@@ -774,18 +774,261 @@ void CFSTView::OnStartButton()
 void CFSTView::OnStopButton()
 {
 	// TODO: 在此添加命令处理程序代码
+	if (caiji_status == 0)
+		return;
+	Pr100ProcFlag = 0;         //stop Pr100Proc Edit by bzw 161129
+	KillTimer(1);
+	KillTimer(tagQueryEspi);   //停止查询ESPI
+	KillTimer(tagAutoSave);		//停止自动保存timer add by bzw 161124
+	KillTimer(tagATCtimeCntDn);
+	caiji_status = 0;
+	readStatus = 0;
+	Pr100flag = 0;
+	/*****************************************/
+	//add by bzw  161110 start
+	stopPR100 = true;
+	//add by bzw  161110 end
+	/*****************************************/
+	Sleep(100);
+	TerminateThread(myThread->m_hThread, 0);
+
+
+
+	GetDlgItem(IDC_LINE_EDIT)->EnableWindow(TRUE);
+	GetDlgItem(IDC_DISTANCE_EDIT)->EnableWindow(TRUE);
+	GetDlgItem(IDC_DIAMETER_EDIT)->EnableWindow(TRUE);
+	GetDlgItem(IDC_FILENAME_EDIT)->EnableWindow(TRUE);
+	GetDlgItem(IDC_UPDOWN_COMBO)->EnableWindow(TRUE);
+
+	GetDlgItem(IDC_MAINTANCE_COMBO)->EnableWindow(TRUE);
+
+	GetDlgItem(IDC_RATE_COMBO)->EnableWindow(TRUE);
+
+
+	OnSavedataButton();   //save data
+
+	CPen	myPen1(PS_SOLID, 1, RGB(0x00, 0x80, 0xFF));
+	CPen	myPen3(PS_SOLID, 1, RGB(0xFF, 0xFF, 0xFF));
+	CPen	*pOldPen;
+	CClientDC   pDC(this);
+	pOldPen = pDC.SelectObject(&myPen3);
+	if (offset > 0)
+	{
+		pDC.MoveTo(nDrawRangeXMin + offset / 2, 445);
+		pDC.LineTo(nDrawRangeXMin + offset / 2, 450);
+		pDC.MoveTo(nDrawRangeXMin + offset, 50);
+		pDC.LineTo(nDrawRangeXMin + offset, 450);
+	}
+	pDC.SelectObject(pOldPen);
+
+	pOldPen = pDC.SelectObject(&myPen1);
+	pDC.SelectStockObject(NULL_BRUSH);
+	pDC.Rectangle(nDrawRangeXMin, 48, nDrawRangeXMax, 451);
+	pDC.SelectObject(pOldPen);
+
+	char pp[20];
+	sprintf(pp, "%5.1f", currentDis / 1000.0);
+	m_distance = _T(pp);
+	UpdateData(FALSE);
 }
 
 
 void CFSTView::OnUpdateButton()
 {
 	// TODO: 在此添加命令处理程序代码
+	if (firstTime == 1)
+	{
+		MessageBox("没有测试数据!", NULL, MB_ICONERROR);
+		return;
+	}
+
+	if ((offset > 0) && (readStatus == 1))
+	{
+		CClientDC   pDC(this);
+		CPen	myPen0(PS_DOT, 1, RGB(0xD0, 0xD0, 0xD0));
+		CPen	myPen11(PS_SOLID, 2, RGB(0x00, 0x00, 0xC0));
+		CPen	myPen22(PS_SOLID, 1, RGB(0xC0, 0x00, 0xC0));
+		CPen	myPen2(PS_SOLID, 1, RGB(0xFF, 0x00, 0x00));
+
+		pDC.FillSolidRect(nDrawRangeXMin + 1, 50, nDrawRangeXMax - nDrawRangeXMin - 2, 400, 0xFFFFFF); // Rectangle(80+1, 48+1, 950-1, 451-1);
+		pDC.SelectObject(&myPen0);
+		for (int i = 0; i < 10; i++)
+		{
+			pDC.MoveTo(nDrawRangeXMin, 50 + i * 40);
+			pDC.LineTo(nDrawRangeXMax, 50 + i * 40);
+		}
+		for (int i = 1; i <= nKMDisplayNum; i++)
+		{
+			pDC.MoveTo(nDrawRangeXMin + i*nPix500M, 50);
+			pDC.LineTo(nDrawRangeXMin + i*nPix500M, 450);
+		}
+
+		pDC.SelectObject(&myPen2);
+		int	maintance = atoi(m_maintance);
+		pDC.MoveTo(nDrawRangeXMin, 450 - maintance * 4 - 40);
+		pDC.LineTo(nDrawRangeXMax, 450 - maintance * 4 - 40);
+
+
+		int	jj = AD_num100 - sectionNum;
+
+		pDC.SelectObject(&myPen11);
+		pDC.MoveTo(nDrawRangeXMin, 410 - (int)AD_value1[jj] * 4);
+		for (int ii = 1; ii <= sectionNum; ii++)
+			pDC.LineTo(nDrawRangeXMin + (ii*(nPix500M / 5)), 410 - (int)AD_value1[jj + ii - 1] * 4);
+
+		//////////////////////////////////////////////////////	
+
+
+		CFont	myFont, *pOldFont;
+		myFont.CreateFont(18, 6, 0, 0, FW_NORMAL, 0, 0, 0, ANSI_CHARSET,
+			OUT_DEVICE_PRECIS, VARIABLE_PITCH | FF_ROMAN, PROOF_QUALITY, 0, "ROMAN");
+		pOldFont = pDC.SelectObject(&myFont);
+
+		pDC.FillSolidRect(nDrawRangeXMin - 20, 455, nDrawRangeXMax - nDrawRangeXMin + 20, 55, 0xFFFFFF);
+
+		pDC.SetTextColor(RGB(0xFF, 0x00, 0xFF));
+		pDC.TextOut(nDrawRangeXMin - 5 - 15, 460 + 10, startKM);
+		pDC.TextOut(nDrawRangeXMin - 5 + offset, 460 + 10, nextKM);
+		if (_T("") != currentName)
+		{
+			pDC.TextOut(nDrawRangeXMin - 5 - 15, 480 + 10, currentName + _T(" (") + currentCode + _T(")"));
+		}
+		else
+		{
+			pDC.TextOut(nDrawRangeXMin - 5 - 15, 480 + 10, _T(""));
+		}
+		pDC.TextOut(nDrawRangeXMin - 5 + offset, 480 + 10, nextName + _T(" (") + nextCode + _T(")"));
+
+		DisplayOthers(&pDC, startKM, nextKM);
+
+		// add by zgliu 2011.04.13 
+		// 每1KM显示一个刻度值
+		CFont myKMFont;
+		myKMFont.CreateFont(15, 5, 0, 0, FW_NORMAL, 0, 0, 0, ANSI_CHARSET,
+			OUT_DEVICE_PRECIS, VARIABLE_PITCH | FF_ROMAN, PROOF_QUALITY, 0, "ROMAN");
+		pOldFont = pDC.SelectObject(&myKMFont);
+		const int nPix1KM = nPix500M * 2;
+		const int nDeltaKM = offset / nPix1KM;
+		CString strTempKM;
+		for (int i = 1; i <= nDeltaKM; ++i)
+		{
+			if (i <= (nKMDisplayNum + 1) / 2)
+			{
+				if (-1 != m_updown.Find(_T("增加")))
+				{
+					strTempKM.Format(_T("%0.2f"), atof(startKM) + i);
+				}
+				else if (-1 != m_updown.Find(_T("减少")))
+				{
+					strTempKM.Format(_T("%0.2f"), atof(startKM) - i);
+				}
+				pDC.SetTextColor(RGB(0x00, 0x00, 0x00));
+				pDC.TextOut(nDrawRangeXMin - 8 + nPix1KM*i, 455, strTempKM);
+			}
+		}
+		pDC.SelectObject(pOldFont);
+		// add end by zgliu 
+
+
+		pDC.SelectObject(&myPen22);
+		pDC.MoveTo(nDrawRangeXMin + offset / 2, 445);
+		pDC.LineTo(nDrawRangeXMin + offset / 2, 450);
+		pDC.MoveTo(nDrawRangeXMin + offset, 50);
+		pDC.LineTo(nDrawRangeXMin + offset, 450);
+
+		pDC.SelectObject(pOldFont);
+	}
 }
 
 
 void CFSTView::OnSavedataButton()
 {
 	// TODO: 在此添加命令处理程序代码
+	char	pp[40];
+	FILE	*fp1, *fp2;
+	int	currentNumber;
+	int strLen;
+	CString tmp, fusionfilename;
+	int kk1;
+
+	//write to gprmc files
+	FILE	*fp4;
+
+	strLen = m_filename.GetLength();
+	tmp = m_filename.Mid(0, strLen - 4);
+	CString gprmcfilename;
+
+	/*gprmcfilename.Format("%s-%03d.TXT", tmp, gprmcfileCount);
+	fp4 = fopen(gprmcfilename, "a+t");
+	if (fp4 != NULL)
+	{
+		for (int iii = 0; iii < gprmcCount; iii++)
+			fprintf(fp4, "%s", gprmcdata[iii]);
+		fclose(fp4);
+	}
+	gprmcCount = 0;
+
+	*/
+	currentNumber = AD_num100;
+
+	if (currentNumber <= currentSavePos)
+	{
+		CString error_message;
+		error_message.Format("没有测试数据可存! ");
+		MessageBox(error_message);
+		return;
+	}
+
+	fp1 = fopen(m_filename, "w+b");
+	if (fp1 == NULL)
+	{
+		MessageBox("文件打开失败!", NULL, MB_ICONERROR);
+		return;
+	}
+
+
+	strLen = m_filename.GetLength();
+	tmp = m_filename.Mid(0, strLen - 4);
+	fusionfilename = tmp + ".fus";
+
+	fp2 = fopen(fusionfilename, "w+b");
+	if (fp1 == NULL)
+	{
+		MessageBox("文件打开失败!", NULL, MB_ICONERROR);
+	}
+	else
+	{
+		kk1 = fwrite(&fusiondata[currentSavePos], sizeof(fusiondataType), currentNumber - currentSavePos, fp2);
+		fclose(fp2);
+	}
+
+
+	kk1 = fwrite(&data1[currentSavePos], sizeof(dataType), currentNumber - currentSavePos, fp1);
+	fclose(fp1);
+
+
+	if (kk1 != currentNumber - currentSavePos)
+	{
+		sprintf(pp, "文件存盘失败(%d  %d)", kk1, currentNumber - currentSavePos);
+		MessageBox(pp, NULL, MB_ICONERROR);
+	}
+	else
+	{
+		strLen = m_filename.GetLength();
+		tmp = m_filename.Mid(0, strLen - 7);
+		m_filenum = m_filenum + 1;                  //add one
+		sprintf(pp, "%03d", m_filenum);
+		m_filename = tmp + pp + _T(".dat");
+		UpdateData(FALSE);
+
+		currentSavePos = currentNumber;
+	}
+
+	//////////////////////////////////////////////  	  
+
+// 	gprmcfileCount = 0;
+
+	return;
 }
 
 
@@ -882,11 +1125,18 @@ BOOL CFSTView::InitPr100()
 		WSACleanup();
 	}
 	//得到本地机器IP地址 结束
+	
 	if (strClient.Mid(0, 11) != _T("172.17.75.2") && strClient.Mid(0, 9) != _T("127.0.0.1"))//判断PC本地IP是否为172.17.75.2
 	{
 		MessageBox(_T("请将本地IP设置为172.17.75.2,子网掩码设为255.255.255.0,默认网关设置为172.17.75.1"));
 		return FALSE;
 	}
+	
+	/*if (strClient.Mid(0, 11) != _T("211.71.79.46") && strClient.Mid(0, 9) != _T("127.0.0.1"))//判断PC本地IP是否为172.17.75.2
+	{
+		MessageBox(_T("请将本地IP设置为211.71.79.46,子网掩码设为255.255.255.0,默认网关设置为172.17.75.1"));
+		return FALSE;
+	}*/
 	if (strClient.Mid(0, 9) == _T("127.0.0.1"))
 	{
 		MessageBox(_T("请打开场强仪！"));
@@ -978,6 +1228,7 @@ BOOL CFSTView::InitPr100()
 				//删除所有的TRAC UdpPath
 				send(nSocketTcp, "TRAC:UDP:DEL ALL\n", strlen("TRAC:UDP:DEL ALL\n"), 0);
 				Sleep(50);
+				
 				//设置UdpPath,将电平测量值发送到IP地址为172.17.75.2的PC机的19000端口
 				send(nSocketTcp, "TRAC:UDP:DEF:FLAG:ON \"172.17.75.2\",19000,\"VOLT:AC\"\n", \
 					strlen("TRAC:UDP:DEF:FLAG:ON \"172.17.75.2\",19000,\"VOLT:AC\"\n"), 0);
@@ -986,6 +1237,15 @@ BOOL CFSTView::InitPr100()
 				send(nSocketTcp, "TRAC:UDP:DEF:TAG:ON \"172.17.75.2\",19000,MSC\n", \
 					strlen("TRAC:UDP:DEF:TAG:ON \"172.17.75.2\",19000,MSC\n"), 0);
 				Sleep(50);
+				
+				/*//设置UdpPath,将电平测量值发送到IP地址为211.71.79.46的PC机的19000端口
+				send(nSocketTcp, "TRAC:UDP:DEF:FLAG:ON \"211.71.79.46\",19000,\"VOLT:AC\"\n", \
+					strlen("TRAC:UDP:DEF:FLAG:ON \"211.71.79.46\",19000,\"VOLT:AC\"\n"), 0);
+				Sleep(50);
+				//
+				send(nSocketTcp, "TRAC:UDP:DEF:TAG:ON \"211.71.79.46\",19000,MSC\n", \
+					strlen("TRAC:UDP:DEF:TAG:ON \"211.71.79.46\",19000,MSC\n"), 0);
+				Sleep(50);*/
 				send(nSocketTcp, "INIT:CONM\n", strlen("INIT:CONM\n"), 0);
 				closesocket(nSocketTcp);
 

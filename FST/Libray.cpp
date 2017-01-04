@@ -9,6 +9,7 @@
 using namespace std;
 #include <string.h>
 #include <stdio.h>
+#include <string.h>
 
 
 #ifdef _DEBUG
@@ -538,7 +539,7 @@ BOOL CLibray::OnInitDialog()
 
 	m_lib_list.ResetContent();
 
-	sprintf(pp, " 序号\t车站\t里程标\t站编号\t类型");
+	sprintf(pp, "序号\t车站\t里程标\t站编号\t类型");
 	m_lib_list.AddString(pp);
 
 
@@ -554,13 +555,12 @@ BOOL CLibray::OnInitDialog()
 
 		UpdateData(FALSE);
 
-		//		strcat(stationName[1],"      ");
+		//strcat(stationName[1],"      ");
 
 		for (i = 1; i <= stationCount; i++)
 		{
-			sprintf(pp, " %03d\t%s\t%0.2f%\t%d\t%d",
+			sprintf(pp, _T(" %03d\t%s\t%0.2f\t%d\t%d"),
 				i, stationName[i], stationDis[i], stationNum[i], type[i]);
-
 			m_lib_list.AddString(pp);
 		}
 
