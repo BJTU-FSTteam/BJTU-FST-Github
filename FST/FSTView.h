@@ -215,6 +215,7 @@ public:
 	afx_msg void OnChangeDistanceEdit();
 	afx_msg void OnSelchangeUpdownCombo();
 	afx_msg void OnSelchangeMaintanceCombo();
+	afx_msg void OnTimer(UINT_PTR nIDEvent);
 };
 
 

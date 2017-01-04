@@ -448,6 +448,7 @@ BEGIN_MESSAGE_MAP(CFSTView, CFormView)
 	ON_EN_CHANGE(IDC_DISTANCE_EDIT, &CFSTView::OnChangeDistanceEdit)
 	ON_CBN_SELCHANGE(IDC_UPDOWN_COMBO, &CFSTView::OnSelchangeUpdownCombo)
 	ON_CBN_SELCHANGE(IDC_MAINTANCE_COMBO, &CFSTView::OnSelchangeMaintanceCombo)
+	ON_WM_TIMER()
 END_MESSAGE_MAP()
 
 // CFSTView 构造/析构
@@ -1153,7 +1154,8 @@ BOOL CFSTView::InitPr100()
 			addr.sin_port = htons(5555);
 
 			/*			err=connect(nSocketTcp,(struct sockaddr *)&addr,sizeof(addr));*/
-			if (SOCKET_ERROR == connect(nSocketTcp, (struct sockaddr *)&addr, sizeof(addr)))
+			if (SOCKET_ERROR == connect(nSocketTcp, (struct sockaddr *)&addr, sizeof(addr))) //目前在这里出错，设置IP后显示连接场强仪失败
+
 			{
 				MessageBox(_T("连接场强仪失败"));
 				return FALSE;
@@ -1290,7 +1292,7 @@ UINT MyThreadProc(LPVOID pParam)
 	CMDIFrameWnd *pFrame = (CMDIFrameWnd*)AfxGetApp()->m_pMainWnd;
 	CMDIChildWnd *pChild = (CMDIChildWnd *)pFrame->GetActiveFrame();
 	CFSTView *pView = (CFSTView *)pChild->GetActiveView();
-	//m_proption = pView->m_rate;			//先注释，后续补
+	m_proption = pView->m_rate;			
 
 	CClientDC  pDC(pView), pDC1(pView);
 	CPen	myPen3(PS_SOLID, 1, RGB(0xFF, 0x00, 0x00));   //Maintenance line color
@@ -1339,7 +1341,11 @@ UINT MyThreadProc(LPVOID pParam)
 	memset(inData, 0, sizeof(inData));  //add by zgliu 2011.03.03     
 										// 	Ex_Vender_ScanOrPrint(1, 16 * 64);
 										// 	Ex_ReadData(2, inData, 16 * 64, 600);
+	for (int i = 0; i < 64 * 16;i+=16)	//模拟适配器加数据位帧头 edit by zwbai 170105
 
+	{
+		inData[i] = 0xFF;
+	}
 
 	for (int i = 0; i<4096; i++)
 	{
@@ -1403,7 +1409,13 @@ UINT MyThreadProc(LPVOID pParam)
 		memset(inData, 0, sizeof(inData));  //add by zgliu 2011.03.03
 // 		Ex_Vender_ScanOrPrint(1, 16 * 64);
 // 		Ex_ReadData(2, inData, 16 * 64, 600);
+		for (int i = 0; i < 64 * 16; i += 16)	//模拟适配器加数据位帧头 edit by zwbai 170105
 
+		{
+			inData[i] = 0xFF;
+			inData[i + 7] = 0x05;
+			inData[i + 8] = 0x05;
+		}
 		/****************************************************************/
 		//add by bzw 161110 start
 		Sleep(250);
@@ -1500,9 +1512,10 @@ UINT MyThreadProc(LPVOID pParam)
 					sprintf(pp, "Checking:%02x %02x,%s", checkByte, inData[jj + 15], pptmp);
 					//		    	m_wndStatusBar.SetPaneText(0,pp,TRUE);
 				}
-				pulseNum = ((unsigned long)inData[jj + 1] << 24) + ((unsigned long)inData[jj + 2] << 16) + ((unsigned long)inData[jj + 3] << 8) + (unsigned long)inData[jj + 4];
-				speedNum = ((unsigned int)inData[jj + 5] << 8) + (unsigned int)inData[jj + 6];
-
+				//pulseNum = ((unsigned long)inData[jj + 1] << 24) + ((unsigned long)inData[jj + 2] << 16) + ((unsigned long)inData[jj + 3] << 8) + (unsigned long)inData[jj + 4];
+				//speedNum = ((unsigned int)inData[jj + 5] << 8) + (unsigned int)inData[jj + 6];
+				pulseNum = 1000;
+				speedNum = 100;
 				currentPulsenum = pulseNum;
 
 				/**同时将信息显示到文本框与界面上 add by chenbin 161209 start***/
@@ -1586,35 +1599,6 @@ UINT MyThreadProc(LPVOID pParam)
 				AD_number++;
 
 				currentDis = startDis + delta*AD_number*unit;
-
-				// add by zgliu 2011.03.13 检查自动控发发送时机
-				// 			if (autoKFflag)  //用户选中自动控发功能
-				// 			{
-				// 				if((currentDis-stationDis[currentStation]*1000.0)*delta > (pView->m_kongfa+50))
-				// 				{
-				// 					pView->m_bATCSendFlag = true;
-				// 					pView->m_bATCSendFlag2 = false;
-				// 					pView->m_bATCSendFlag3 = true;
-				// 				}
-				// 				if (!pView->m_bSendTimeChecking)
-				// 				{
-				// 					pView->check_SendTime(); 
-				// 				}
-				// 				//若距车站800M时控发失败，则200M时再次发送自动控发命令
-				// 				//实时场强值小于20dB则认为800M控发失败
-				// 				if (pView->m_fRealTimeDB <= 20.0)
-				// 				{
-				// 					pView->check_2ndSendTime();			
-				// 				}
-				//                 //检查站内停车的控发时机
-				// 	           	if (((1 == delta) && pView->TimeSend[currentStation].DownStopFlag) || ((-1 == delta) && pView->TimeSend[currentStation].UpStopFlag))
-				// 				{
-				// 					pView->check_RestartSendTime();
-				// 				}
-				// 
-				// 			} 
-				// add end by zgliu 
-
 				if ((AD_number>2) && (pulseNum - prePulseNum != pulseDivision))   //pulseDivision=2
 				{
 					sprintf(pp, "Missing: %02x %06d  %08x  %08x", inData[jj], AD_number, pulseNum, prePulseNum);
@@ -1625,8 +1609,8 @@ UINT MyThreadProc(LPVOID pParam)
 					sprintf(pp, "Correct: %06d  %08x  %08x, %02d", AD_number, pulseNum, prePulseNum, pulseNum - prePulseNum);
 					//			  pDC.TextOut(400,550,pp);
 				}
-				prePulseNum = pulseNum;
-
+				prePulseNum = pulseNum - 4;//调试用
+				//prePulseNum = pulseNum;
 				if ((AD_number>0) && ((AD_number%pulse100M) == 0))
 					//	 	  	if(fabs(AD_number*unit-(AD_num100+1)*100.0)<1.0005*unit)
 				{
@@ -2127,8 +2111,7 @@ void CFSTView::ReadData(unsigned char inData[], unsigned char sharebuffer[], int
 			if (0xff == inData[i])
 			{
 				inData[i + 7] = sharebuffer[i + 7];  //高位场强值数据  测试时场强值赋为常数 /0/
-				inData[i + 8] = sharebuffer[i + 8];    //低位场强值数据  /200/
-
+				inData[i + 8] = sharebuffer[i + 8];    //低位场强值数据  /200/	
 				for (j = 9; j < 16; j++)
 				{
 					inData[i + j] = 0x00;
@@ -2138,10 +2121,11 @@ void CFSTView::ReadData(unsigned char inData[], unsigned char sharebuffer[], int
 	}
 	if (sizeofBuf < 1024)
 	{
-		int i;
+		int i = 0;
 		int k = 0;
 		for (i = 0; i < sizeofBuf; i += 16)
-		{
+		{		
+
 			if (0xff == inData[i])
 			{
 				inData[i + 7] = sharebuffer[i + 7];  //高位场强值数据  测试时场强值赋为常数 /0/
@@ -3350,4 +3334,83 @@ void CFSTView::OnSelchangeMaintanceCombo()
 
 	if (preStr != m_maintance)
 		InitScreen();
+}
+
+
+void CFSTView::OnTimer(UINT_PTR nIDEvent)
+{
+	// TODO: 在此添加消息处理程序代码和/或调用默认值
+	/*
+	if (1 == nIDEvent)
+	{
+		int ii, loopcount, Delta;	// 0-pNMUpDown->iDelta;
+		double tmpdis;
+
+		if (gpscapture_flag)
+		{
+			tmpdis = gpscaptureDis * 1000;
+			if (currentDis>tmpdis)
+			{
+				loopcount = (int)((currentDis - tmpdis) / 100);
+				if (delta>0)
+					Delta = -1;
+				else
+					Delta = 1;
+			}
+			else
+			{
+				loopcount = (int)((tmpdis - currentDis) / 100);
+				if (delta>0)
+					Delta = 1;
+				else
+					Delta = -1;
+			}
+
+			if (loopcount>0)
+			{
+				for (ii = 0; ii < loopcount; ii++)
+				{
+					if ((Delta<0) && (AD_num100>0) && (sectionNum>0))
+					{
+						currentDis = currentDis - 100.0*delta;
+						AD_number = AD_number - pulse100M;
+						AD_num100--;
+						sectionNum--;
+					}
+					else if ((Delta>0) && (AD_num100>0) && (fabs(currentDis - atof(nextKM)*1000.0)>100.0))
+					{
+						currentDis = currentDis + 100.0*delta;
+						AD_number = AD_number + pulse100M;
+
+						AD_value1[AD_num100] = AD_value1[AD_num100 - 1];
+						data1[AD_num100].AD_95 = data1[AD_num100 - 1].AD_95;
+						data1[AD_num100].AD_90 = data1[AD_num100 - 1].AD_90;
+						data1[AD_num100].AD_50 = data1[AD_num100 - 1].AD_50;
+						data1[AD_num100].curPos = data1[AD_num100 - 1].curPos + delta * 100;
+						////////////////////////////////////////////////////////
+						AD_num100++;
+						sectionNum++;
+					}
+				}
+			}
+			gpscapture_flag = 0;	//reset gpscapture flag after processing
+		}
+	}
+	*/
+	//GSP部分代码，此处先注释 ，Edit by zwbai 170104
+	if (tagAutoSave == nIDEvent)
+	{
+		//	ADdataAutoSave();   //测试数据文件自动存盘 存盘周期5mins
+		if (readStatus == 1)
+		{
+			OnSavedataButton();
+			/*
+			n_ontimer++;					//调试用   edit by bzw 161125
+			CString error_ontimer;
+			error_ontimer.Format("OnSavedataButton();调用次数：%i次,readStatus:%i",n_ontimer,readStatus);
+			MessageBox(error_ontimer);
+			*/
+		}
+	}
+	CFormView::OnTimer(nIDEvent);
 }
