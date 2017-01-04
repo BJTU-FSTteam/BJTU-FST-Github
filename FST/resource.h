@@ -9,6 +9,8 @@
 #define IDR_MAINFRAME                   128
 #define IDR_FSTTYPE                     130
 #define IDD_PR100_DIALOG                310
+#define IDD_INQUIRY_DIALOG              313
+#define IDD_LIBRAY_DIALOG               315
 #define IDC_COMBO_Frequency             1000
 #define IDC_LU_EDIT                     1001
 #define IDC_LD_EDIT                     1002
@@ -41,20 +43,38 @@
 #define IDC_SAVEFILE_SPIN               1029
 #define IDC_LIST2                       1030
 #define IDC_INQUIRY_LIST                1030
+#define IDC_STATIC_RANGE                1031
+#define IDC_STATUS_LIST                 1032
+#define IDC_FNAME_EDIT                  1033
+#define IDC_LIB_LIST                    1034
+#define IDC_NO_EDIT                     1035
+#define IDC_STATION_EDIT                1036
+#define IDC_NUMBER_EDIT                 1038
+#define IDC_TYPE_COMBO                  1040
+#define IDC_UNDO_BUTTON                 1041
+#define IDC_MODIFY_BUTTON               1042
+#define IDC_INSERT_BUTTON               1043
+#define IDC_DELETE_BUTTON               1044
+#define IDC_APPEND_BUTTON               1045
+#define IDC_SAVEDISK_BUTTON             1046
+#define IDC_SAVEAS_BUTTON               1047
 #define ID_PR100_SETTING                32771
 #define ID_START_BUTTON                 32772
 #define ID_STOP_BUTTON                  32773
 #define ID_UPDATE_BUTTON                32774
 #define ID_SAVEDATA_BUTTON              32775
 #define ID_MODE_BUTTON                  32776
+#define ID_FILE_CHECK                   32777
+#define ID_32778                        32778
+#define IDC_STATUS_MENU                 32779
 
 // Next default values for new objects
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
-#define _APS_NEXT_RESOURCE_VALUE        313
-#define _APS_NEXT_COMMAND_VALUE         32777
-#define _APS_NEXT_CONTROL_VALUE         1031
+#define _APS_NEXT_RESOURCE_VALUE        320
+#define _APS_NEXT_COMMAND_VALUE         32780
+#define _APS_NEXT_CONTROL_VALUE         1048
 #define _APS_NEXT_SYMED_VALUE           310
 #endif
 #endif

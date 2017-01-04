@@ -29,7 +29,7 @@
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v140</PlatformToolset>
-    <CharacterSet>Unicode</CharacterSet>
+    <CharacterSet>MultiByte</CharacterSet>
     <UseOfMfc>Dynamic</UseOfMfc>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
@@ -192,6 +192,8 @@
     <ClInclude Include="FST.h" />
     <ClInclude Include="FSTDoc.h" />
     <ClInclude Include="FSTView.h" />
+    <ClInclude Include="Inquiry.h" />
+    <ClInclude Include="Libray.h" />
     <ClInclude Include="MainFrm.h" />
     <ClInclude Include="PR100Setting.h" />
     <ClInclude Include="Resource.h" />
@@ -202,6 +204,8 @@
     <ClCompile Include="FST.cpp" />
     <ClCompile Include="FSTDoc.cpp" />
     <ClCompile Include="FSTView.cpp" />
+    <ClCompile Include="Inquiry.cpp" />
+    <ClCompile Include="Libray.cpp" />
     <ClCompile Include="MainFrm.cpp" />
     <ClCompile Include="PR100Setting.cpp" />
     <ClCompile Include="stdafx.cpp">

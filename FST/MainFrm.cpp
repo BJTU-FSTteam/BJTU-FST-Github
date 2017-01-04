@@ -4,14 +4,16 @@
 
 #include "stdafx.h"
 #include "FST.h"
-
+#include "FSTView.h"
 #include "MainFrm.h"
-
+#include "afxwin.h"
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #endif
 
 // CMainFrame
+extern int readStatus;
+CStatusBar  m_wndStatusBar;
 
 IMPLEMENT_DYNCREATE(CMainFrame, CFrameWnd)
 
@@ -32,10 +34,69 @@ static UINT indicators[] =
 CMainFrame::CMainFrame()
 {
 	// TODO: 在此添加成员初始化代码
+	// TODO: add member initialization code here
+	//add by sgw
+	//保留原屏幕分辨率，以便系统关闭时恢复
+	m_width = GetSystemMetrics(SM_CXSCREEN);
+	m_height = GetSystemMetrics(SM_CYSCREEN);
+	//改变系统分辨率
+	DEVMODE dm;
+	ZeroMemory(&dm, sizeof(dm));//add by shao(清空内存)
+	dm.dmSize = sizeof(dm);//add by shao(设置大小)
+	dm.dmBitsPerPel = 32;
+	dm.dmPelsWidth = 1024;
+	dm.dmPelsHeight = 768;
+	//dm.dmDisplayFrequency=75; 
+	dm.dmFields = DM_PELSWIDTH | DM_BITSPERPEL | DM_PELSHEIGHT/*|DM_DISPLAYFREQUENCY*/;
+	LONG res;
+	res = ChangeDisplaySettings(&dm, CDS_UPDATEREGISTRY);
+	//add end
+
+	//add by sgw
+	// 任务栏自动隐藏
+	APPBARDATA abd;
+	HWND hTaskBar;
+	abd.cbSize = sizeof(abd);
+	SHAppBarMessage(ABM_GETTASKBARPOS, &abd);
+	hTaskBar = ::FindWindowEx(NULL, NULL, "Shell_TrayWnd", NULL);
+	if (hTaskBar != 0)
+	{
+		abd.hWnd = hTaskBar;
+		abd.lParam = ABS_ALWAYSONTOP | ABS_AUTOHIDE;
+		SHAppBarMessage(ABM_SETSTATE, &abd);
+	}
+	//add end
 }
 
 CMainFrame::~CMainFrame()
 {
+	//add by sgw
+	//恢复原来屏幕分辨率
+	DEVMODE dm;
+	dm.dmBitsPerPel = 32;
+	dm.dmPelsWidth = m_width;
+	dm.dmPelsHeight = m_height;
+	//dm.dmDisplayFrequency=75;
+	dm.dmSize = sizeof(dm);
+	dm.dmFields = DM_PELSWIDTH | DM_BITSPERPEL | DM_PELSHEIGHT/*|DM_DISPLAYFREQUENCY*/;
+	LONG res;
+	res = ChangeDisplaySettings(&dm, CDS_UPDATEREGISTRY);
+	//add end
+
+	//add by sgw
+	//任务栏自动隐藏恢复
+	APPBARDATA abd;
+	HWND hTaskBar;
+	abd.cbSize = sizeof(abd);
+	SHAppBarMessage(ABM_GETTASKBARPOS, &abd);
+	hTaskBar = ::FindWindowEx(0, 0, "Shell_TrayWnd", NULL);
+	if (hTaskBar != 0)
+	{
+		abd.hWnd = hTaskBar;
+		abd.lParam = ABS_ALWAYSONTOP;
+		SHAppBarMessage(ABM_SETSTATE, &abd);
+	}
+	//add end
 }
 
 int CMainFrame::OnCreate(LPCREATESTRUCT lpCreateStruct)
@@ -93,3 +154,14 @@ void CMainFrame::Dump(CDumpContext& dc) const
 
 // CMainFrame 消息处理程序
 
+
+
+void CMainFrame::OnClose()
+{
+	if (1 == readStatus)
+	{
+		MessageBox(_T("\r\n请先停止当前线路的测试!"), _T("操作提示"));
+		return;
+	}
+	CFrameWnd::OnClose();
+}

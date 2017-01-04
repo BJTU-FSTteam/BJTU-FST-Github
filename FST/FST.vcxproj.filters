@@ -42,6 +42,12 @@
     <ClInclude Include="PR100Setting.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="Inquiry.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Libray.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="FST.cpp">
@@ -60,6 +66,12 @@
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="PR100Setting.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Inquiry.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Libray.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>
