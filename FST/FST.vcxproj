@@ -196,6 +196,7 @@
     <ClInclude Include="Inquiry.h" />
     <ClInclude Include="Libray.h" />
     <ClInclude Include="MainFrm.h" />
+    <ClInclude Include="ModeSet.h" />
     <ClInclude Include="PR100Setting.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="stdafx.h" />
@@ -208,6 +209,7 @@
     <ClCompile Include="Inquiry.cpp" />
     <ClCompile Include="Libray.cpp" />
     <ClCompile Include="MainFrm.cpp" />
+    <ClCompile Include="ModeSet.cpp" />
     <ClCompile Include="PR100Setting.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>

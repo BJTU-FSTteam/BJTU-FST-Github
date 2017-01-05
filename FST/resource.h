@@ -11,6 +11,7 @@
 #define IDD_PR100_DIALOG                310
 #define IDD_INQUIRY_DIALOG              313
 #define IDD_LIBRAY_DIALOG               315
+#define IDD_MODESET                     320
 #define IDC_COMBO_Frequency             1000
 #define IDC_LU_EDIT                     1001
 #define IDC_LD_EDIT                     1002
@@ -58,6 +59,8 @@
 #define IDC_APPEND_BUTTON               1045
 #define IDC_SAVEDISK_BUTTON             1046
 #define IDC_SAVEAS_BUTTON               1047
+#define IDC_COMBO1                      1048
+#define IDC_MODESET                     1048
 #define ID_PR100_SETTING                32771
 #define ID_START_BUTTON                 32772
 #define ID_STOP_BUTTON                  32773
@@ -72,9 +75,9 @@
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
-#define _APS_NEXT_RESOURCE_VALUE        320
+#define _APS_NEXT_RESOURCE_VALUE        323
 #define _APS_NEXT_COMMAND_VALUE         32780
-#define _APS_NEXT_CONTROL_VALUE         1048
+#define _APS_NEXT_CONTROL_VALUE         1049
 #define _APS_NEXT_SYMED_VALUE           310
 #endif
 #endif
