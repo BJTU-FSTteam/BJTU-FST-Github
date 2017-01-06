@@ -140,14 +140,14 @@ public:
 	unsigned char SampleArea[ShareBufferSize];
 	UINT Antenna;
 	static DWORD WINAPI RecvProc(LPVOID lpParameter);
-	void ReadData(unsigned char inData[], unsigned char sharebuffer[], int sizeofBuf);
+	static DWORD WINAPI RecvProc_MS(LPVOID lpParameter); //add by yjh 161125
+	void ReadData(unsigned char inData[], unsigned char sharebuffer[], unsigned char odoData[], int sizeofBuf);
 	BOOL starRecordLevel;
 	unsigned char TaxData[6];
 	/*****************************************///add by bzw 161220 end
 private:
 	int firstTime;
 	bool bSecondTime;
-	double PI;
 	enum
 	{
 		CtrlShow = 0,
@@ -215,6 +215,7 @@ public:
 	afx_msg void OnChangeDistanceEdit();
 	afx_msg void OnSelchangeUpdownCombo();
 	afx_msg void OnSelchangeMaintanceCombo();
+	afx_msg void OnTimer(UINT_PTR nIDEvent);
 };
 
 
