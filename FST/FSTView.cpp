@@ -73,6 +73,10 @@ int		delta;
 float	AD_value1[30720];//InitScreen中包含
 dataType	data1[30720];
 int controlstatus = 0;	//0--local control, 1--remote control
+bool m_FSTbLocked = true;
+float dbvalue_global = 0.0;
+int    which = 95;
+
 struct fusiondataType
 {
 	int curpos;
@@ -1230,27 +1234,20 @@ BOOL CFSTView::InitPr100()
 			if ((hostinfo = gethostbyname(name)) != NULL)
 			{
 				ip = inet_ntoa(*(struct in_addr *)*hostinfo->h_addr_list);
-				strClient.Format(_T("%s"), ip);
+				strClient.Format("%s", ip);
 			}
 		}
 		WSACleanup();
 	}
 	//得到本地机器IP地址 结束
-	
-	if (strClient.Mid(0, 11) != _T("172.17.75.2") && strClient.Mid(0, 9) != _T("127.0.0.1"))//判断PC本地IP是否为172.17.75.2
+	if (strClient.Mid(0, 11) != "172.17.75.2"&&strClient.Mid(0, 9) != "127.0.0.1")//判断PC本地IP是否为172.17.75.2
 	{
-		MessageBox(_T("请将本地IP设置为172.17.75.2,子网掩码设为255.255.255.0,默认网关设置为172.17.75.1"));
+		MessageBox("请将本地IP设置为172.17.75.2,子网掩码设为255.255.255.0,默认网关设置为172.17.75.1");
 		return FALSE;
 	}
-	
-	/*if (strClient.Mid(0, 11) != _T("211.71.79.46") && strClient.Mid(0, 9) != _T("127.0.0.1"))//判断PC本地IP是否为172.17.75.2
+	if (strClient.Mid(0, 9) == "127.0.0.1")
 	{
-		MessageBox(_T("请将本地IP设置为211.71.79.46,子网掩码设为255.255.255.0,默认网关设置为172.17.75.1"));
-		return FALSE;
-	}*/
-	if (strClient.Mid(0, 9) == _T("127.0.0.1"))
-	{
-		MessageBox(_T("请打开场强仪！"));
+		MessageBox("请打开场强仪！");
 		return FALSE;
 	}
 	else
@@ -1264,10 +1261,9 @@ BOOL CFSTView::InitPr100()
 			addr.sin_port = htons(5555);
 
 			/*			err=connect(nSocketTcp,(struct sockaddr *)&addr,sizeof(addr));*/
-			if (SOCKET_ERROR == connect(nSocketTcp, (struct sockaddr *)&addr, sizeof(addr))) //目前在这里出错，设置IP后显示连接场强仪失败
-
+			if (SOCKET_ERROR == connect(nSocketTcp, (struct sockaddr *)&addr, sizeof(addr)))
 			{
-				MessageBox(_T("连接场强仪失败"));
+				MessageBox("连接场强仪失败");
 				return FALSE;
 			}
 			else
@@ -1303,14 +1299,14 @@ BOOL CFSTView::InitPr100()
 				//Clear memory lists
 				send(nSocketTcp, "MEM:CLE 0\n", strlen("MEM:CLE 0\n"), 0);
 				Sleep(50);
-				char sendbuff[40];
-				sprintf_s(sendbuff, "MEM:CONT 0,%sE6,0,FM,15kHz,6,0,0,0,0,1\n", Pr100freq);
+				char sendbuff[100];
+				sprintf(sendbuff, "MEM:CONT 0,%sE6,0,FM,15kHz,6,0,0,0,0,1\n", Pr100freq);
 				Sleep(50);
 				send(nSocketTcp, sendbuff, strlen(sendbuff), 0);
 				Sleep(50);
-				sprintf_s(sendbuff, "MEM:LABEL 0,\"%s MHz, BW 15kHz\"\n", Pr100freq);
+				sprintf(sendbuff, "MEM:LABEL 0,\"%s MHz, BW 15kHz\"\n", Pr100freq);
 				send(nSocketTcp, sendbuff, strlen(sendbuff), 0);
-				sprintf_s(sendbuff, "FREQ %sE6\n", Pr100freq);
+				sprintf(sendbuff, "FREQ %sE6\n", Pr100freq);
 				//设置频率
 				send(nSocketTcp, sendbuff, strlen(sendbuff), 0);
 				Sleep(50);
@@ -1340,7 +1336,6 @@ BOOL CFSTView::InitPr100()
 				//删除所有的TRAC UdpPath
 				send(nSocketTcp, "TRAC:UDP:DEL ALL\n", strlen("TRAC:UDP:DEL ALL\n"), 0);
 				Sleep(50);
-				
 				//设置UdpPath,将电平测量值发送到IP地址为172.17.75.2的PC机的19000端口
 				send(nSocketTcp, "TRAC:UDP:DEF:FLAG:ON \"172.17.75.2\",19000,\"VOLT:AC\"\n", \
 					strlen("TRAC:UDP:DEF:FLAG:ON \"172.17.75.2\",19000,\"VOLT:AC\"\n"), 0);
@@ -1349,15 +1344,6 @@ BOOL CFSTView::InitPr100()
 				send(nSocketTcp, "TRAC:UDP:DEF:TAG:ON \"172.17.75.2\",19000,MSC\n", \
 					strlen("TRAC:UDP:DEF:TAG:ON \"172.17.75.2\",19000,MSC\n"), 0);
 				Sleep(50);
-				
-				/*//设置UdpPath,将电平测量值发送到IP地址为211.71.79.46的PC机的19000端口
-				send(nSocketTcp, "TRAC:UDP:DEF:FLAG:ON \"211.71.79.46\",19000,\"VOLT:AC\"\n", \
-					strlen("TRAC:UDP:DEF:FLAG:ON \"211.71.79.46\",19000,\"VOLT:AC\"\n"), 0);
-				Sleep(50);
-				//
-				send(nSocketTcp, "TRAC:UDP:DEF:TAG:ON \"211.71.79.46\",19000,MSC\n", \
-					strlen("TRAC:UDP:DEF:TAG:ON \"211.71.79.46\",19000,MSC\n"), 0);
-				Sleep(50);*/
 				send(nSocketTcp, "INIT:CONM\n", strlen("INIT:CONM\n"), 0);
 				closesocket(nSocketTcp);
 
@@ -1366,7 +1352,7 @@ BOOL CFSTView::InitPr100()
 				nSocketUdp = socket(AF_INET, SOCK_DGRAM, 0);
 				if (INVALID_SOCKET == nSocketUdp)
 				{
-					MessageBox(_T("套接字创建失败！"));
+					MessageBox("套接字创建失败！");
 					return FALSE;
 				}
 				struct sockaddr_in addrSock;
@@ -1378,7 +1364,7 @@ BOOL CFSTView::InitPr100()
 				if (SOCKET_ERROR == retval)
 				{
 					closesocket(nSocketUdp);
-					MessageBox(_T("绑定端口失败！"));
+					MessageBox("绑定端口失败！");
 					return FALSE;
 				}
 				else
@@ -1446,7 +1432,7 @@ UINT MyThreadProc(LPVOID pParam)
 	//unsigned int  vol1;
 	short	vol1;
 	unsigned char  checkByte;
-
+	bool flagNum = false;
 	//// discard the first 1024 data/////////////
 	memset(inData, 0, sizeof(inData));  //add by zgliu 2011.03.03     
 										// 	Ex_Vender_ScanOrPrint(1, 16 * 64);
@@ -1488,7 +1474,7 @@ UINT MyThreadProc(LPVOID pParam)
 	long simcount = 0;
 	int matchcount = 0;
 	int kkk;
-
+	int diffNum = 0;
 	char dbuffer[9];
 	char tbuffer[9];
 	int captureno;
@@ -1509,86 +1495,11 @@ UINT MyThreadProc(LPVOID pParam)
 	int dataready_flag = 0;
 	while (readStatus == 1) //&& AD_number<40000
 	{
-		/*
-		if (pView->selftestStatus)
-		{
-		for (int kkk=0; kkk<3276; kkk++)
-		for (int kkkk=0; kkkk<32767; kkkk++);
-		}*/
-
 		memset(inData, 0, sizeof(inData));  //add by zgliu 2011.03.03
-// 		Ex_Vender_ScanOrPrint(1, 16 * 64);
-// 		Ex_ReadData(2, inData, 16 * 64, 600);
-		for (int i = 0; i < 64 * 16; i += 16)	//模拟适配器加数据位帧头 edit by zwbai 170105
+		//Ex_Vender_ScanOrPrint(1, 16 * 64);
+		//Ex_ReadData(2, inData, 16 * 64, 600);
+		 
 
-		{
-			inData[i] = 0xFF;
-// 			inData[i + 7] = 0x05;
-// 			inData[i + 8] = 0x05;
-		}
-		/****************************************************************/
-		//add by bzw 161110 start
-		Sleep(250);
-		if (false == pView->WorkAreaFlag)
-		{
-			dataready_flag = 0;
-			//以下为读数据操作
-			if (pView->pWorkArea>0)
-			{
-				pView->ReadData(inData, pView->WorkArea,odoDataTosend, pView->pWorkArea);
-				pView->pWorkArea = 0;
-				dataready_flag = 1;
-				pView->WorkAreaFlag = true;
-				pView->SampleAreaFlag = false;
-			}
-			else if (0 == pView->pWorkArea)// 当前工作区为空
-			{
-
-				pView->WorkAreaFlag = true;
-				pView->SampleAreaFlag = false;
-
-
-				if (pView->pSampleArea>0)
-				{
-					pView->ReadData(inData, pView->SampleArea, odoDataTosend, pView->pSampleArea);
-					pView->pSampleArea = 0;
-					dataready_flag = 1;
-
-				}
-			}
-		}
-
-		else if (false == pView->SampleAreaFlag)
-		{
-
-			dataready_flag = 0;
-			//以下为读数据操作
-			if (pView->pSampleArea>0)
-			{
-				pView->ReadData(inData, pView->SampleArea, odoDataTosend, pView->pSampleArea);
-				pView->pSampleArea = 0;
-				dataready_flag = 1;
-				pView->SampleAreaFlag = true;
-				pView->WorkAreaFlag = false;
-			}
-			else if (0 == pView->pSampleArea)// 当前工作区为空
-			{
-				pView->SampleAreaFlag = true;
-				pView->WorkAreaFlag = false;
-				if (pView->pWorkArea>0)
-				{
-					pView->ReadData(inData, pView->WorkArea, odoDataTosend, pView->pWorkArea);
-					pView->pWorkArea = 0;
-					dataready_flag = 1;
-				}
-			}
-		}
-		if (!dataready_flag)
-			continue;
-		//add by bzw 161110 end
-		/****************************************************************/
-		
-		//此处删除原版程序gprmc部分代码 edit by zwbai 161227
 
 		for (int jj = 0; jj<16 * 64; jj += 16)
 		{
@@ -1603,7 +1514,6 @@ UINT MyThreadProc(LPVOID pParam)
 			else*/
 			if (inData[jj] == 0xFF) // for field strength data only
 			{
-				
 				checkByte = 0;
 				char pptmp[100], pptmp1[5];
 				//			sprintf(pptmp, "ID:%02x", inData[jj]);
@@ -1622,38 +1532,11 @@ UINT MyThreadProc(LPVOID pParam)
 					sprintf(pp, "Checking:%02x %02x,%s", checkByte, inData[jj + 15], pptmp);
 					//		    	m_wndStatusBar.SetPaneText(0,pp,TRUE);
 				}
-				//pulseNum = ((unsigned long)inData[jj + 1] << 24) + ((unsigned long)inData[jj + 2] << 16) + ((unsigned long)inData[jj + 3] << 8) + (unsigned long)inData[jj + 4];
-				//speedNum = ((unsigned int)inData[jj + 5] << 8) + (unsigned int)inData[jj + 6];
-				//add by yjh start 
-				{
-					char tempChar[3];
-					tempChar[0] = inData[2];
-					tempChar[1] = inData[3];
-					tempChar[2] = inData[4];
-					pulseNum = atoi(tempChar);
-				}
-				//add by yjh end
+
+				pulseNum = ((unsigned long)inData[jj + 1] << 24) + ((unsigned long)inData[jj + 2] << 16) + ((unsigned long)inData[jj + 3] << 8) + (unsigned long)inData[jj + 4];
 				speedNum = ((unsigned int)inData[jj + 5] << 8) + (unsigned int)inData[jj + 6];
 
 				currentPulsenum = pulseNum;
-
-				/**同时将信息显示到文本框与界面上 add by chenbin 161209 start***/
-				CString strEidtValue;
-				strEidtValue.Format(_T("%06.1f"), currentDis / 1000.0);
-				pView->SetDlgItemText(IDC_EDIT_CurMileage, strEidtValue);
-// 				strEidtValue.Format(_T("%05.2f"), dbVal1);
-// 				pView->SetDlgItemText(IDC_EDIT_CurDBValue, strEidtValue);
-// 				strEidtValue.Format(_T("%05.1f"), speedNum*unit*0.9 * 2);
-				strEidtValue.Format(_T("%05.1f"), pulseNum*2.5*unit*0.9);
-				pView->SetDlgItemText(IDC_EDIT_CurSpeed, strEidtValue);
-				sprintf(pp, "%05.1f", speedNum*unit*1.8);//1.8); //???
-				pDC.TextOut(915, 525, pp);
-				sprintf(pp, "%06.1f", currentDis / 1000.0);
-				pDC.TextOut(460, 525, pp);
-// 				sprintf(pp, "%05.2f", dbVal1);
-// 				pDC.TextOut(690, 525, pp);
-				/**同时将信息显示到文本框与界面上 add by chenbin 161209 end***/
-
 
 				if (pulseNum == 0)	//added by Cai, 2007-7-9 for V9.0
 				{
@@ -1662,13 +1545,10 @@ UINT MyThreadProc(LPVOID pParam)
 					// 				pDC.TextOut(915,520,pp);
 					//add by zgliu 2011.03.03
 					speedNum = ((unsigned int)inData[jj + 5] << 8) + (unsigned int)inData[jj + 6];
-					//pView->m_fCurSpeed = speedNum*unit*0.9;
-					pView->m_fCurSpeed = speedNum*unit*0.9 * 2;
-					///pDC.TextOut(915, 525, pp);
-
+					pView->m_fCurSpeed = speedNum*unit*1.8;
 					static unsigned int nCnt = 0;
 					nCnt++;
-					if (/*20*/5 == nCnt)
+					if (20 == nCnt)
 					{
 						CString strEditValue;
 						strEditValue.Format(_T("%05.1f"), pView->m_fCurSpeed);
@@ -1678,12 +1558,8 @@ UINT MyThreadProc(LPVOID pParam)
 					//add end by zgliu 2011.03.03
 					continue;
 				}
-				//vol1=(short)(((inData[jj+7]<<8)&0xff00)|((inData[jj+8])&0xff)) + 100;
 
-
-				/***处理负的场强值start by chenbin 161209：*/
-				/*inData[jj+7]如果等于255，该场强为负值，inData[jj+8]为场强值的绝对值，归一化处理即为：-inData[jj+8]+100**/
-				/***Pr100输出场强值为short型，是真实场强值的10倍，归一化为[0,1000]时无需乘以10***/
+				//add by zwbai 170223 此部分是对场强原始值的取值处理
 				if (255 == inData[jj + 7])
 				{
 					vol1 = 100 - (short)((inData[jj + 8]) & 0xff);
@@ -1692,111 +1568,125 @@ UINT MyThreadProc(LPVOID pParam)
 				{
 					vol1 = (short)(((inData[jj + 7] << 8) & 0xff00) | ((inData[jj + 8]) & 0xff)) + 100;
 				}
-				/***处理负的场强值end by chenbin 161209***/
-
-				vol1 = 500;  //调试用
-				//add by bzw 161111 start
 				if (vol1 < 0)
 				{
 					vol1 = 0;
-				}else if((vol1 >= 0) && (vol1 < 1000))
+					//histo1[vol1]++;
+				}
+				/*将小于0的vol1设为0 end 20161208乌局测试改*/
+				/*将大于1000的vol1设为1000 start 20161208乌局测试改*/
+				/*将大于1000的vol1设为1000 end 20161208乌局测试改*/
+				if ((vol1 >= 0) && (vol1 < 1000))
 				{
 					histo1[vol1]++;
 				}
-				/*else
-				{
-				// 					sprintf(pp,"Wrong Data: %06dm  %d", curMilage, vol1);
-				// 					pDC.TextOut(400,550,pp);
-				continue;
-				}*/
-				//add by bzw 161111 end
-
-
+				//add by zwbai 170223 此部分是对场强原始值的取值处理
 				AD_number++;
+				//AD_number=AD_number+(pulseNum-prePulseNum)/2;
+
 
 				currentDis = startDis + delta*AD_number*unit;
-				if ((AD_number>2) && (pulseNum - prePulseNum != pulseDivision))   //pulseDivision=2
+				diffNum = pulseNum - prePulseNum;
+				if ((AD_number>2) && (diffNum != pulseDivision))   //pulseDivision=2
 				{
-					sprintf(pp, "Missing: %02x %06d  %08x  %08x", inData[jj], AD_number, pulseNum, prePulseNum);
+					/*for (int i = 0;i<(diffNum/2);i++)
+					{
+					AD_number++;
+					if((AD_number%pulse100M)==0)
+					flagNum = 1;
+					}*/
+					sprintf(pp, "Missing: %06d %04d %06d  %08x  %08x", speedNum, inData[jj], AD_number, pulseNum, prePulseNum);
+					pDC.TextOut(400, 250, pp);
 					//		  	  m_wndStatusBar.SetPaneText(0,pp,TRUE);
 				}
 				else
 				{
-					sprintf(pp, "Correct: %06d  %08x  %08x, %02d", AD_number, pulseNum, prePulseNum, pulseNum - prePulseNum);
-					//			  pDC.TextOut(400,550,pp);
+					sprintf(pp, "Correct:%06d  %06d  %08x  %08x, %02d", speedNum, AD_number, pulseNum, prePulseNum, pulseNum - prePulseNum);
+					pDC.TextOut(400, 350, pp);
 				}
-				prePulseNum = pulseNum - 4;//调试用
-				//prePulseNum = pulseNum;
-				if ((AD_number>0) && ((AD_number%pulse100M) == 0))
-					//	 	  	if(fabs(AD_number*unit-(AD_num100+1)*100.0)<1.0005*unit)
-				{
-					kk = 0;
-					count = 0;
-					//while((count<pulse95)&&(kk<4096))
-					while ((count<pulse95) && (kk<1000))
-						count += histo1[kk++];
-					data1[AD_num100].AD_95 = AD2dB(kk - 1);	//including loss_voltage
-															//data1[AD_num100].AD_95= AD2dB(vol1);
+				currentDis = startDis + delta*AD_number*unit;
+				prePulseNum = pulseNum;
 
-															//while((count<pulse90)&&(kk<4096))
-					while ((count<pulse90) && (kk<1000))
-						count += histo1[kk++];
-					data1[AD_num100].AD_90 = AD2dB(kk - 1);
-					//data1[AD_num100].AD_90= AD2dB(vol1);
-
-					//while((count<pulse50)&&(kk<4096))
-					while ((count<pulse50) && (kk<1000))
-						count += histo1[kk++];
-					data1[AD_num100].AD_50 = AD2dB(kk - 1);
-					//data1[AD_num100].AD_50= AD2dB(vol1);
-					/*
-					//added for calibration work
-					cal_voltage = 10.0*(kk-1)/4095;
-					cal_dbval = data1[AD_num100].AD_50;
-					sprintf(pp,"%05.2fdB %fV", cal_dbval, cal_voltage);
-					m_wndStatusBar.SetPaneText(1,pp,TRUE);
-					//end
-					*/
-					data1[AD_num100].curPos = (int)startDis + (delta*AD_num100) * 100; //???
-																					   /// added by cai (2006.3.26)
-					sprintf(pp, "dB: %6.2f %6.2f  %6.2f", data1[AD_num100].AD_95,
-						data1[AD_num100].AD_90, data1[AD_num100].AD_95);
-
-					fusiondata[AD_num100].curpos = data1[AD_num100].curPos;
-					fusiondata[AD_num100].pulsenum = currentPulsenum;
-					fusiondata[AD_num100].lat = currentLat;
-					fusiondata[AD_num100].lon = currentLon;
-
-					//			  pDC.TextOut(750,550,pp);
-
-					//////////////////////////////////////////////
-
-					if (which == 95)
+				//			if(((AD_number>0) && ((AD_number%pulse100M)==0))||((AD_number>0) && (flagNum = 1)))
+				if ((AD_number>0))
+					if (((AD_number%pulse100M) == 0) || (flagNum == TRUE))
 					{
-						dbVal1 = data1[AD_num100].AD_95;
-					}
-					else if (which == 90)
-					{
-						dbVal1 = data1[AD_num100].AD_90;
-					}
-					else
-					{
-						dbVal1 = data1[AD_num100].AD_50;
-					}
+						m_FSTbLocked = true;		//取场强值，不可写
 
-					for (int i = 0; i<4096; i++)
-					{
-						histo1[i] = 0;
-					}
+						flagNum = false;
+						/*
+						kk=0;
+						count=0;
+						//while((count<pulse95)&&(kk<4096))
+						while((count<pulse95)&&(kk<1000))
+						count+=histo1[kk++];
+						//data1[AD_num100].AD_95 = AD2dB(kk-1);	//including loss_voltage
+						data1[AD_num100].AD_95= AD2dB(vol1);
 
-					AD_value1[AD_num100] = dbVal1;
+						//while((count<pulse90)&&(kk<4096))
+						while((count<pulse90)&&(kk<1000))
+						count+=histo1[kk++];
+						//data1[AD_num100].AD_90 = AD2dB(kk-1);
+						data1[AD_num100].AD_90= AD2dB(vol1);
 
-					if (0 == sectionNum)
-					{
-						pDC1.MoveTo(nDrawRangeXMin + sectionNum*nPix100m, 410 - (int)(dbVal1)* 4);
-					}
+						//while((count<pulse50)&&(kk<4096))
+						while((count<pulse50)&&(kk<1000))
+						count+=histo1[kk++];
+						//data1[AD_num100].AD_50 = AD2dB(kk-1);
+						data1[AD_num100].AD_50= AD2dB(vol1);
+						*/
+						/*
+						//added for calibration work
+						cal_voltage = 10.0*(kk-1)/4095;
+						cal_dbval = data1[AD_num100].AD_50;
+						sprintf(pp,"%05.2fdB %fV", cal_dbval, cal_voltage);
+						m_wndStatusBar.SetPaneText(1,pp,TRUE);
+						//end
+						*/
+						data1[AD_num100].curPos = (int)startDis + (delta*AD_num100) * 100; //???
+																						   /// added by cai (2006.3.26)
 
+						sprintf(pp, "dB: %6.2f %6.2f  %6.2f", data1[AD_num100].AD_95,
+							data1[AD_num100].AD_90, data1[AD_num100].AD_50);
 
+						fusiondata[AD_num100].curpos = data1[AD_num100].curPos;
+						fusiondata[AD_num100].pulsenum = currentPulsenum;
+						fusiondata[AD_num100].lat = currentLat;
+						fusiondata[AD_num100].lon = currentLon;
+
+						pDC.TextOut(750, 550, pp);
+
+						//////////////////////////////////////////////
+						/*
+						if(which==95)
+						{
+						dbVal1=data1[AD_num100].AD_95;
+						}
+						else if(which==90)
+						{
+						dbVal1=data1[AD_num100].AD_90;
+						}
+						else
+						{
+						dbVal1=data1[AD_num100].AD_50;
+						}
+
+						for(int i=0; i<4096; i++)
+						{
+						histo1[i]=0;
+						}
+						*/
+						dbVal1 = dbvalue_global;
+						AD_value1[AD_num100] = dbVal1;
+
+						m_FSTbLocked = false;			//取到场强值，可写add by zwbai 170224
+						if (0 == sectionNum)
+						{
+							pDC1.MoveTo(nDrawRangeXMin + sectionNum*nPix100m, 410 - (int)(dbVal1)* 4);
+						}
+
+						AD_num100++;
+						sectionNum++;
 
 
 					//////////////// Update position of the train and draw the curve ///////////
@@ -2045,7 +1935,7 @@ UINT MyThreadProc(LPVOID pParam)
 // 	pDC.SelectObject(pOldFont);此处有问题，先注释
 
 
-	AfxEndThread(0);
+	//AfxEndThread(0);
 	//    ExitThread(0);
 
 	//
@@ -2277,160 +2167,133 @@ DWORD WINAPI CFSTView::RecvProc(LPVOID lpParameter)
 	char cBuffer[33]; //接收数据缓冲区
 	memset(cBuffer, 0, 33);
 	int len = 0;
+	unsigned int countNum = 0;
+	unsigned long fst[4096];
+	unsigned long fstPlus = 0;
+	unsigned long fstvalue_plus = 0;
+	unsigned int dbNum = 0;
 	pView->nCountLevel = 0;
 	//	MSCpacket *pt;	
-	CString str, strtemp, strdisplay = _T("");
+	CString str, strtemp, strdisplay = "";
 	while (TRUE)
 	{
+
+
 		if (0 == Pr100ProcFlag || true == pView->stopPR100)
 		{
-			//return 0;  调试用，先注释
+			return 0;
 		}
+
 		//str.Format("%d,%d",pView->WorkAreaFlag,pView->SampleAreaFlag);
 		//pView->SetDlgItemText(IDC_EDIT3,str);
 		len = recv(sock, cBuffer, sizeof(cBuffer), 0);//接收数据
 		pView->nLevel[pView->nCountLevel] = cBuffer[len - 4];
 		pView->nLevel[pView->nCountLevel + 1] = cBuffer[len - 3];
-
 		//***  显示原始场强值 调试用   *****//
 		float Val;
-		Val = ((short)(((pView->nLevel[pView->nCountLevel] << 8) & 0xff00) | (pView->nLevel[pView->nCountLevel + 1]) & 0xff));
+		Val = ((short)((pView->nLevel[pView->nCountLevel] << 8) & 0xff00) | (pView->nLevel[pView->nCountLevel + 1] & 0xff));
 		Val = (float)Val / 10;
-		//Pr100输出场强值为short型，是真实场强值的10倍
+		CString str1;
+		str1.Format("%2.1f", Val);
+		pView->SetDlgItemText(IDC_EDIT20, str1);
+		//*** 显示原始场强值 调试用 end   *****//
+		////////////////////////////////场强统计add by zwbai 170224 start/////////////////////////////////////////
 
-		// 		CString str1;
-		// 		str1.Format("%2.1f", Val);
-		// 		pView->SetDlgItemText(IDC_EDIT20, str1);
-		// 		//*** 显示原始场强值 调试用 end   *****//
-
-		pView->nCountLevel += 2;
-
-		if (true == pView->SampleAreaFlag)
+		if (255 == pView->nLevel[pView->nCountLevel])
 		{
-			//写SampleArea
-			//	if(TRUE==pView->starRecordLevel)//写场强值操作
-			//	{
-			for (int i = 0; i<pView->nCountLevel; i += 2)
+			dbNum = 100 - (short)((pView->nLevel[pView->nCountLevel + 1]) & 0xff);
+		}
+		else
+		{
+			dbNum = (short)(((pView->nLevel[pView->nCountLevel] << 8) & 0xff00) | (pView->nLevel[pView->nCountLevel + 1] & 0xff)) + 100;
+		}
+		if (dbNum < 0)
+		{
+			dbNum = 0;
+		}
+		/*将小于0的vol1设为0 end 20161208乌局测试改*/
+		/*将大于1000的vol1设为1000 start 20161208乌局测试改*/
+		/*将大于1000的vol1设为1000 end 20161208乌局测试改*/
+		if ((dbNum >= 0) && (dbNum < 1000))
+		{
+			fst[dbNum]++;
+			countNum++;
+		}
+		/*方案一：求100个瞬时场强的均值 start*/
+		/*
+		if (countNum==100)
+		{
+
+		for (int i = 0;i<countNum;i++)
+		{
+		fstPlus += fst[i];
+		}
+		fstvalue_plus = fstPlus/100;
+		if(m_FSTbLocked == false)
+		dbvalue_global = AD2dB(fstvalue_plus);
+		countNum = 0;
+		fstPlus = 0;
+		}
+		*/
+		/*方案一：求100个瞬时场强的均值 end*/
+
+		/*方案二：按照采样率要求得到200个瞬时场强的统计值 start*/
+
+		if (countNum == 200)
+		{
+
+			int kk = 0;
+			int count = 0;
+			pulse95 = 0.05*countNum;
+			pulse90 = 0.1*countNum;
+			pulse50 = 0.5*countNum;
+
+			while ((count<pulse95) && (kk<1000))
+				count += fst[kk++];
+			data1[AD_num100].AD_95 = AD2dB(kk - 1);	//including loss_voltage
+
+			while ((count<pulse90) && (kk<1000))
+				count += fst[kk++];
+			data1[AD_num100].AD_90 = AD2dB(kk - 1);
+
+			while ((count<pulse50) && (kk<1000))
+				count += fst[kk++];
+			data1[AD_num100].AD_50 = AD2dB(kk - 1);
+
+			if (m_FSTbLocked == false)
 			{
-				pView->SampleArea[pView->pSampleArea] = 0xff;
-				/*					for(int j=0;j<6;j++)
+				if (which == 95)
 				{
-				//pView->SampleArea[pView->pSampleArea+j+1]=pView->TaxData[j];  //0-5帧  写入TAX箱里程值
-				pView->SampleArea[pView->pSampleArea+j+1]=0x00;
+					dbvalue_global = data1[AD_num100].AD_95;
 				}
-				*/
-				pView->SampleArea[pView->pSampleArea + 7] = pView->nLevel[i];
-				pView->SampleArea[pView->pSampleArea + 8] = pView->nLevel[i + 1];       //6-7帧  写入场强值
-				for (int k = 0; k<7; k++)
+				else if (which == 90)
 				{
-					pView->SampleArea[pView->pSampleArea + k + 9] = 0x00;               //8-15帧 写入0x00
+					dbvalue_global = data1[AD_num100].AD_90;
 				}
-				/*************************************************************/
-				//pView->SetDlgItemText(IDC_EDIT7,"Sample TAX+LEVEL");
-				//str.Format("FF %02x %02x %02x %02x %02x %02x %02x %02x",pView->TaxData[0],pView->TaxData[1],\
-														pView->TaxData[2],pView->TaxData[3],pView->TaxData[4],pView->TaxData[5],pView->nLevel[i],\
-						pView->nLevel[i+1]);
-				//pView->SetDlgItemText(IDC_EDIT_TAX,str);  //显示用，可删除
-				/*************************************************************/
-				pView->pSampleArea += 16;
+				else
+				{
+					dbvalue_global = data1[AD_num100].AD_50;
+				}
 
 			}
-
-			pView->nCountLevel = 0;
-			memset(pView->nLevel, 0, 10000);
-			//	}
-			// 			if (TRUE==pView->GpsRecordStart)//写GPS数据操作
-			// 			{
-			//  			pView->GpsRecordStart=false;
-			// 				for(int i=0;i<pView->GpsmessageLen;i++)
-			// 				{
-			// 					pView->SampleArea[pView->pSampleArea+i]=pView->Gpsmessage.GetAt(i);
-			// 				}
-			// 				/*************************************************************/
-			// 				pView->SetDlgItemText(IDC_EDIT6,"GPS");
-			// 				pView->SetDlgItemText(IDC_EDIT_GPS,pView->Gpsmessage);  //显示用，可删除
-			// 				/*************************************************************/
-			// 
-			// 				pView->pSampleArea+=pView->GpsmessageLen;
-			// 
-			// 				/*************************************************************/
-			// 				pView->SetDlgItemText(IDC_EDIT4,"当前SamArea\r\n字节数");
-			// 				str.Format("%d",pView->pSampleArea);                            //显示用，可删除
-			// 				pView->SetDlgItemText(IDC_EDIT_SAMBYTENUMC,str);
-			// 				/*************************************************************/
-			// 			}
-		}
-		if (true == pView->WorkAreaFlag)
-		{
-			//写WorkArea
-			//if(TRUE==pView->starRecordLevel)//写场强值
-			//{
-			for (int i = 0; i<pView->nCountLevel; i += 2)
+			countNum = 0;
+			for (int i = 0; i<4096; i++)
 			{
-				pView->WorkArea[pView->pWorkArea] = 0xff;                          //帧头 0xff
-																				   /*					for(int j=0;j<6;j++)
-																				   {
-																				   pView->WorkArea[pView->pWorkArea+j+1]=pView->TaxData[j];     //1-6帧  写入TAX箱里程值
-																				   }
-																				   */
-				pView->WorkArea[pView->pWorkArea + 7] = pView->nLevel[i];
-				pView->WorkArea[pView->pWorkArea + 8] = pView->nLevel[i + 1];          //7-8帧  写入场强值
-				for (int k = 0; k<7; k++)
-				{
-					pView->WorkArea[pView->pWorkArea + k + 9] = 0x00;                  //9-16帧 写入0x00
-				}
-				pView->pWorkArea += 16;
-				/*************************************************************/
-				//pView->SetDlgItemText(IDC_EDIT7,"Work TAX+LEVEL");
-				//str.Format("FF %02x %02x %02x %02x %02x %02x %02x %02x",pView->TaxData[0],pView->TaxData[1],\
-														pView->TaxData[2],pView->TaxData[3],pView->TaxData[4],pView->TaxData[5],pView->nLevel[i],\
-						pView->nLevel[i+1]);
-				//pView->SetDlgItemText(IDC_EDIT_TAX,str); //显示用，可删除
-				/*************************************************************/
-
+				fst[i] = 0;
 			}
-
-			pView->nCountLevel = 0;
-			memset(pView->nLevel, 0, 10000);
-
-			//}
-			// 			if (TRUE==pView->GpsRecordStart)//写GPS数据操作
-			// 			{
-			//  				pView->GpsRecordStart=false;
-			// 				for(int i=0;i<pView->GpsmessageLen;i++)
-			// 				{
-			// 					pView->WorkArea[pView->pWorkArea+i]=pView->Gpsmessage.GetAt(i);
-			// 				}
-			// 
-			// 				/*************************************************************/
-			// 				pView->SetDlgItemText(IDC_EDIT6,"GPS");
-			// 				pView->SetDlgItemText(IDC_EDIT_GPS,pView->Gpsmessage);  //显示用，可删除
-			// 				/*************************************************************/
-			// 		
-			// 				pView->pWorkArea+=pView->GpsmessageLen;
-			// 
-			// 				/*************************************************************/
-			// 				pView->SetDlgItemText(IDC_EDIT5,"当前WorkArea\r\n字节数");
-			// 				str.Format("%d",pView->pWorkArea);                            //显示用，可删除
-			// 				pView->SetDlgItemText(IDC_EDIT_WORKBYTENUMC,str);
-			// 				/*************************************************************/
-			// 			}
+			//	memset(pView->nLevel,0,10000);
 		}
-		/*if(pView->pSampleArea>ShareBufferSize || pView->pWorkArea>ShareBufferSize)
+
+		/*方案二：按照采样率要求得到100个瞬时场强的统计值 end*/
+
+
+		////////////////////////////////场强统计add by zwbai 170224 end//////////////////////////////////////////
+
+		//pView->nCountLevel+=2;
+
+		if (pView->nCountLevel>ShareBufferSize)
 		{
-		AfxMessageBox("内存溢出");
-		return 0;
-		}*/
-		if (pView->pSampleArea>ShareBufferSize)
-		{
-			AfxMessageBox(_T("内存溢出 pView->pSampleArea") + pView->nCountLevel);
-			//	cout << pView->nCountLevel << endl;
-			return 0;
-		}
-		else if (pView->pWorkArea>ShareBufferSize)
-		{
-			AfxMessageBox(_T("内存溢出 pView->pWorkArea") + pView->nCountLevel);
-			//	cout << pView->nCountLevel << endl;
+			AfxMessageBox("内存溢出 pView->nCountLevel" + pView->nCountLevel);
 			return 0;
 		}
 	}
