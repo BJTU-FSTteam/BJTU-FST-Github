@@ -126,7 +126,7 @@ public:
 		CFSTView* m_pView;
 	};
 	BOOL InitPR100flag; // FALSE:没有初始化场强仪  TRUE: 场强仪完成初始化
-	bool stopPR100;   //true停止 false不停止 
+	bool stopPR100 = true;   //true停止 false不停止 
 	CString Pr100freq;
 	unsigned char nLevel[10000];
 	int nCountLevel;
@@ -216,6 +216,7 @@ public:
 	afx_msg void OnSelchangeUpdownCombo();
 	afx_msg void OnSelchangeMaintanceCombo();
 	afx_msg void OnTimer(UINT_PTR nIDEvent);
+	bool InitMode();
 };
 
 

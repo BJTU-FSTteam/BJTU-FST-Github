@@ -679,7 +679,9 @@ void CFSTView::OnStartButton()
 	// 		MessageBox(pp, NULL, MB_ICONEXCLAMATION);
 	// 		return;
 	// 	}
-
+	Pr100flag = 1;
+	Pr100ProcFlag = 1;
+	readStatus = 1;
 
 	RECVPARAM *pRecvParam = new RECVPARAM;
 	pRecvParam->sock = nSocketUdp;
@@ -790,9 +792,6 @@ void CFSTView::OnStartButton()
 	CreateDirectory(strTemp, NULL);
 	*/
 	//delete by bzw 161129	 
-	readStatus = 1;
-	Pr100flag = 1;
-	Pr100ProcFlag = 1;
 	myThread = AfxBeginThread(MyThreadProc, NULL, THREAD_PRIORITY_HIGHEST);
 	myThread->m_bAutoDelete = TRUE;
 }
@@ -1167,7 +1166,7 @@ void CFSTView::OnModeButton()
 			struct sockaddr_in addrSockMs;
 			addrSockMs.sin_addr.S_un.S_addr = htonl(INADDR_ANY);
 			addrSockMs.sin_family = AF_INET;
-			addrSockMs.sin_port = htons(6700); //到时候看实际选择的端口号是多少，在修改这个端口号
+			addrSockMs.sin_port = htons(8234); //到时候看实际选择的端口号是多少，在修改这个端口号
 			int retval;
 			retval = bind(nSocketUdpMs, (SOCKADDR*)&addrSockMs, sizeof(SOCKADDR));
 			if (SOCKET_ERROR == retval)
@@ -1240,11 +1239,14 @@ BOOL CFSTView::InitPr100()
 		WSACleanup();
 	}
 	//得到本地机器IP地址 结束
-	if (strClient.Mid(0, 11) != "172.17.75.2"&&strClient.Mid(0, 9) != "127.0.0.1")//判断PC本地IP是否为172.17.75.2
+	//if (strClient.Mid(0, 11) != "172.17.75.2"&&strClient.Mid(0, 9) != "127.0.0.1")//判断PC本地IP是否为172.17.75.2
+	/*if (strClient.Mid(0, 11) != "192.168.0.201"&&strClient.Mid(0, 9) != "127.0.0.1")//判断PC本地IP是否为172.17.75.2
+
 	{
-		MessageBox("请将本地IP设置为172.17.75.2,子网掩码设为255.255.255.0,默认网关设置为172.17.75.1");
+		MessageBox("请将本地IP设置为192.168.0.201,子网掩码设为255.255.255.0,默认网关设置为192.168.0.1");
 		return FALSE;
 	}
+	*/
 	if (strClient.Mid(0, 9) == "127.0.0.1")
 	{
 		MessageBox("请打开场强仪！");
@@ -1257,7 +1259,7 @@ BOOL CFSTView::InitPr100()
 		{
 			memset(&addr, 0, sizeof(addr));
 			addr.sin_family = AF_INET;
-			addr.sin_addr.s_addr = inet_addr("172.17.75.1");
+			addr.sin_addr.s_addr = inet_addr("192.168.0.5");
 			addr.sin_port = htons(5555);
 
 			/*			err=connect(nSocketTcp,(struct sockaddr *)&addr,sizeof(addr));*/
@@ -1337,12 +1339,18 @@ BOOL CFSTView::InitPr100()
 				send(nSocketTcp, "TRAC:UDP:DEL ALL\n", strlen("TRAC:UDP:DEL ALL\n"), 0);
 				Sleep(50);
 				//设置UdpPath,将电平测量值发送到IP地址为172.17.75.2的PC机的19000端口
+				/*
 				send(nSocketTcp, "TRAC:UDP:DEF:FLAG:ON \"172.17.75.2\",19000,\"VOLT:AC\"\n", \
 					strlen("TRAC:UDP:DEF:FLAG:ON \"172.17.75.2\",19000,\"VOLT:AC\"\n"), 0);
+				*/
+				send(nSocketTcp, "TRAC:UDP:DEF:FLAG:ON \"192.168.0.201\",19000,\"VOLT:AC\"\n", \
+					strlen("TRAC:UDP:DEF:FLAG:ON \"192.168.0.201\",19000,\"VOLT:AC\"\n"), 0);
 				Sleep(50);
 				//
-				send(nSocketTcp, "TRAC:UDP:DEF:TAG:ON \"172.17.75.2\",19000,MSC\n", \
-					strlen("TRAC:UDP:DEF:TAG:ON \"172.17.75.2\",19000,MSC\n"), 0);
+				/*send(nSocketTcp, "TRAC:UDP:DEF:TAG:ON \"172.17.75.2\",19000,MSC\n", \
+					strlen("TRAC:UDP:DEF:TAG:ON \"172.17.75.2\",19000,MSC\n"), 0);*/
+				send(nSocketTcp, "TRAC:UDP:DEF:TAG:ON \"192.168.0.201\",19000,MSC\n", \
+					strlen("TRAC:UDP:DEF:TAG:ON \"192.168.0.201\",19000,MSC\n"), 0);
 				Sleep(50);
 				send(nSocketTcp, "INIT:CONM\n", strlen("INIT:CONM\n"), 0);
 				closesocket(nSocketTcp);
@@ -1496,11 +1504,13 @@ UINT MyThreadProc(LPVOID pParam)
 	while (readStatus == 1) //&& AD_number<40000
 	{
 		memset(inData, 0, sizeof(inData));  //add by zgliu 2011.03.03
-		//Ex_Vender_ScanOrPrint(1, 16 * 64);
+		for (int i = 0; i < 64 * 16; i += 16)	//模拟适配器加数据位帧头 edit by zwbai 170105
+
+		{
+			inData[i] = 0xFF;
+		}
+											//Ex_Vender_ScanOrPrint(1, 16 * 64);
 		//Ex_ReadData(2, inData, 16 * 64, 600);
-		 
-
-
 		for (int jj = 0; jj<16 * 64; jj += 16)
 		{
 			/*
@@ -1526,7 +1536,6 @@ UINT MyThreadProc(LPVOID pParam)
 				}
 				//			sprintf(pptmp1, " %02X", inData[ii+jj]);
 				//			strcat(pptmp, pptmp1);
-
 				if (checkByte != inData[jj + 15])
 				{
 					sprintf(pp, "Checking:%02x %02x,%s", checkByte, inData[jj + 15], pptmp);
@@ -1534,8 +1543,9 @@ UINT MyThreadProc(LPVOID pParam)
 				}
 
 				pulseNum = ((unsigned long)inData[jj + 1] << 24) + ((unsigned long)inData[jj + 2] << 16) + ((unsigned long)inData[jj + 3] << 8) + (unsigned long)inData[jj + 4];
-				speedNum = ((unsigned int)inData[jj + 5] << 8) + (unsigned int)inData[jj + 6];
-
+				//speedNum = ((unsigned int)inData[jj + 5] << 8) + (unsigned int)inData[jj + 6];
+				speedNum = ((unsigned int)(odoDataTosend[2] +odoDataTosend[3] + odoDataTosend[4]));
+				
 				currentPulsenum = pulseNum;
 
 				if (pulseNum == 0)	//added by Cai, 2007-7-9 for V9.0
@@ -1544,8 +1554,10 @@ UINT MyThreadProc(LPVOID pParam)
 					// 				sprintf(pp,"%05.1f", speedNum*unit*1.8);//0.9); 
 					// 				pDC.TextOut(915,520,pp);
 					//add by zgliu 2011.03.03
-					speedNum = ((unsigned int)inData[jj + 5] << 8) + (unsigned int)inData[jj + 6];
-					pView->m_fCurSpeed = speedNum*unit*1.8;
+					//speedNum = ((unsigned int)inData[jj + 5] << 8) + (unsigned int)inData[jj + 6];
+					speedNum = ((unsigned int)odoDataTosend[2] << 16) + ((unsigned int)odoDataTosend[3] << 8) + ((unsigned int)odoDataTosend[4]);
+
+					pView->m_fCurSpeed = speedNum*unit*18/1000;
 					static unsigned int nCnt = 0;
 					nCnt++;
 					if (20 == nCnt)
@@ -1558,33 +1570,8 @@ UINT MyThreadProc(LPVOID pParam)
 					//add end by zgliu 2011.03.03
 					continue;
 				}
-
-				//add by zwbai 170223 此部分是对场强原始值的取值处理
-				if (255 == inData[jj + 7])
-				{
-					vol1 = 100 - (short)((inData[jj + 8]) & 0xff);
-				}
-				else
-				{
-					vol1 = (short)(((inData[jj + 7] << 8) & 0xff00) | ((inData[jj + 8]) & 0xff)) + 100;
-				}
-				if (vol1 < 0)
-				{
-					vol1 = 0;
-					//histo1[vol1]++;
-				}
-				/*将小于0的vol1设为0 end 20161208乌局测试改*/
-				/*将大于1000的vol1设为1000 start 20161208乌局测试改*/
-				/*将大于1000的vol1设为1000 end 20161208乌局测试改*/
-				if ((vol1 >= 0) && (vol1 < 1000))
-				{
-					histo1[vol1]++;
-				}
-				//add by zwbai 170223 此部分是对场强原始值的取值处理
 				AD_number++;
-				//AD_number=AD_number+(pulseNum-prePulseNum)/2;
-
-
+				
 				currentDis = startDis + delta*AD_number*unit;
 				diffNum = pulseNum - prePulseNum;
 				if ((AD_number>2) && (diffNum != pulseDivision))   //pulseDivision=2
@@ -1606,7 +1593,6 @@ UINT MyThreadProc(LPVOID pParam)
 				}
 				currentDis = startDis + delta*AD_number*unit;
 				prePulseNum = pulseNum;
-
 				//			if(((AD_number>0) && ((AD_number%pulse100M)==0))||((AD_number>0) && (flagNum = 1)))
 				if ((AD_number>0))
 					if (((AD_number%pulse100M) == 0) || (flagNum == TRUE))
@@ -1687,8 +1673,6 @@ UINT MyThreadProc(LPVOID pParam)
 
 						AD_num100++;
 						sectionNum++;
-
-
 					//////////////// Update position of the train and draw the curve ///////////
 					// modified by zgliu 2011.04.14, 将原来的每100米2个像素点改为6个
 					// 先覆盖旧车再画当前位置的小车
@@ -1738,10 +1722,18 @@ UINT MyThreadProc(LPVOID pParam)
 					strEidtValue.Format(_T("%05.2f"), dbVal1);
 					pView->SetDlgItemText(IDC_EDIT_CurDBValue, strEidtValue);
 // 					strEidtValue.Format(_T("%05.1f"), speedNum*unit*0.9 * 2);
-					strEidtValue.Format(_T("%05.1f"), pulseNum*2.5*unit*0.9);   //新适配器odo协议
+					strEidtValue.Format(_T("%05.1f"), speedNum*unit*18/1000);   //新适配器odo协议
 					pView->SetDlgItemText(IDC_EDIT_CurSpeed, strEidtValue);
 					// add end by zgliu
 				}
+				CString strEidtValue;
+				strEidtValue.Format(_T("%06.1f"), currentDis / 1000.0);
+				pView->SetDlgItemText(IDC_EDIT_CurMileage, strEidtValue);
+				strEidtValue.Format(_T("%05.2f"), dbVal1);
+				pView->SetDlgItemText(IDC_EDIT_CurDBValue, strEidtValue);
+				// 					strEidtValue.Format(_T("%05.1f"), speedNum*unit*0.9 * 2);
+				strEidtValue.Format(_T("%05.1f"), speedNum*unit * 18);   //新适配器odo协议
+				pView->SetDlgItemText(IDC_EDIT_CurSpeed, strEidtValue);
 
 				//若列车驶出当前显示范围(startKM+15km)，则重新画屏
 				// add by zgliu 2011.04.13
@@ -1916,7 +1908,7 @@ UINT MyThreadProc(LPVOID pParam)
 					pDC.MoveTo(nDrawRangeXMin + offset, 50);
 					pDC.LineTo(nDrawRangeXMin + offset, 450);
 					pDC.SetTextColor(RGB(0xFF, 0x00, 0xFF));
-					// 				pDC.SetBkMode(TRANSPARENT);
+				 	// 				pDC.SetBkMode(TRANSPARENT);
 					// 				pDC.SetROP2(R2_XORPEN);
 					sendFlag = 0;   //allow send timeCode and addressCode again
 				}
@@ -1931,12 +1923,12 @@ UINT MyThreadProc(LPVOID pParam)
 	sprintf(pp, "%ld %d", tm2 - tm1, AD_num100);
 	//    m_wndStatusBar.SetPaneText(0,pp,TRUE);
 
-	pDC.SelectObject(pOldPen);
-// 	pDC.SelectObject(pOldFont);此处有问题，先注释
+	//pDC.SelectObject(pOldPen);
+ 	//pDC.SelectObject(pOldFont);//此处有问题，先注释
 
 
-	//AfxEndThread(0);
-	//    ExitThread(0);
+	AfxEndThread(0);
+	// ExitThread(0);
 
 	//
 	//	可以利用线程句柄所指的::GetExitCodeThread()函数,如果线程已经结束, 
@@ -1944,7 +1936,7 @@ UINT MyThreadProc(LPVOID pParam)
 	//	先将 CWinThread成员对象m_bAutoDelete设置为FALSE.
 	//	另外对象在线程结束时会自动检测到.
 
-
+	
 	return 0;    // thread completed successfully
 }
 
@@ -2177,8 +2169,6 @@ DWORD WINAPI CFSTView::RecvProc(LPVOID lpParameter)
 	CString str, strtemp, strdisplay = "";
 	while (TRUE)
 	{
-
-
 		if (0 == Pr100ProcFlag || true == pView->stopPR100)
 		{
 			return 0;
@@ -3590,4 +3580,10 @@ int	CFSTView::ReadLineName(CString fname)
 	m_filename = CString(lineFile[0]) + "000.dat";
 	UpdateData(FALSE);
 	return kk;
+}
+
+bool CFSTView::InitMode()
+{
+	
+	return false;
 }
