@@ -13,7 +13,7 @@ IMPLEMENT_DYNAMIC(CModeSet, CDialog)
 
 CModeSet::CModeSet(CWnd* pParent /*=NULL*/)
 	: CDialog(IDD_MODESET, pParent)
-	, m_nMode(_T(""))
+	, m_nMode(_T("0:ODO"))
 {
 
 }
@@ -31,6 +31,7 @@ void CModeSet::DoDataExchange(CDataExchange* pDX)
 
 BEGIN_MESSAGE_MAP(CModeSet, CDialog)
 	ON_BN_CLICKED(IDOK, &CModeSet::OnBnClickedOk)
+	ON_CBN_SELCHANGE(IDC_MODESET, &CModeSet::OnCbnSelchangeModeset)
 END_MESSAGE_MAP()
 
 
@@ -41,4 +42,10 @@ void CModeSet::OnBnClickedOk()
 {
 	// TODO: 在此添加控件通知处理程序代码
 	CDialog::OnOK();
+}
+
+
+void CModeSet::OnCbnSelchangeModeset()
+{
+	// TODO: 在此添加控件通知处理程序代码
 }

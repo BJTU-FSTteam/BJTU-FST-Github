@@ -23,4 +23,5 @@ protected:
 public:
 	afx_msg void OnBnClickedOk();
 	CString m_nMode;
+	afx_msg void OnCbnSelchangeModeset();
 };

@@ -143,8 +143,9 @@ char kilomter[6]; // add by yjh
 unsigned long preGonglibiao = 0; //add by yjh 161125 定义了公里标，通过ODO和TAX得到公里标
 unsigned long curGonglibiao = 0; //add by yjh 161125
 unsigned long tempGonglibiao = 0;//add by yjh 161125
-								 //unsigned char inData[64*16];//add by yjh 16121
-unsigned char odoDataTosend[10];// odo数据 add by yjh
+								 
+unsigned int  global_odoSpeedData = 0;//用于全局传送的odo速度值
+unsigned long global_odoTotalData = 0;//用于全局传送的odo脉冲总数
 struct position
 {
 	double x;
@@ -565,7 +566,7 @@ CFSTView::CFSTView()
 	/*****************************************/
 	//add by bzw  161110 start
 	InitPR100flag = FALSE;
-	stopPR100 = false;
+	stopPR100 = true;
 	starRecordLevel = FALSE;
 	WorkAreaFlag = false;   //FALSE可读,TRUE 可写
 	SampleAreaFlag = true;  //FALSE表示可读,TRUE 可写
@@ -682,6 +683,7 @@ void CFSTView::OnStartButton()
 	Pr100flag = 1;
 	Pr100ProcFlag = 1;
 	readStatus = 1;
+	stopPR100 = false;
 
 	RECVPARAM *pRecvParam = new RECVPARAM;
 	pRecvParam->sock = nSocketUdp;
@@ -696,26 +698,23 @@ void CFSTView::OnStartButton()
 	HANDLE hThread_MS = CreateThread(NULL, 0, RecvProc_MS, (LPVOID)pRecvParam_MS, 0, NULL);
 	//创建一个新的线程，用于UDp接受ODO GPS TAX 箱的数据
 	//add by yjh  161115 end
-	/*if (!InitPR100flag)
+	if (!InitPR100flag)
 	{
 		MessageBox(_T("      请设置场强仪！"));				//pr100模拟程序有问题，此处先注释 Edit by zwbai 161228
 		return;
-	}*/
-	stopPR100 = false;
+	}
 	starRecordLevel = FALSE;
 	pWorkArea = 0;
 	pSampleArea = 0;
 	WorkAreaFlag = false;   //FALSE可读,TRUE 可写
 	SampleAreaFlag = true;  //FALSE表示可读,TRUE 可写
-	 m_line.TrimLeft();
-	 m_line.TrimRight();
+	m_line.TrimLeft();
+	m_line.TrimRight();
      if (m_line.GetLength()<2)
 	 	{
 	 		MessageBox(_T("请输入测试线路!"), NULL, MB_ICONWARNING);
 	 		return;
 	 	}
-
-
 	/********************以下代码段应为PC与原版适配器的信息交互，此处先注释，*********************///Edit by zwbai 161222
 	// 	unsigned char sendbuff[65] = { 0xff, 0x00, 0x02, 0x00, 0x00 };
 	// 	unsigned char recvbuff[65];
@@ -748,12 +747,8 @@ void CFSTView::OnStartButton()
 	currentSel = 0 - 1;
 	currentSavePos = 0;
 	firstMapped = 0;
-
 	OnSelchangeUpdownCombo();
 	InitScreen();
-
-
-
 	caiji_status = 1;
 
 	GetDlgItem(IDC_LINE_EDIT)->EnableWindow(FALSE);
@@ -827,12 +822,8 @@ void CFSTView::OnStopButton()
 	GetDlgItem(IDC_DIAMETER_EDIT)->EnableWindow(TRUE);
 	GetDlgItem(IDC_FILENAME_EDIT)->EnableWindow(TRUE);
 	GetDlgItem(IDC_UPDOWN_COMBO)->EnableWindow(TRUE);
-
 	GetDlgItem(IDC_MAINTANCE_COMBO)->EnableWindow(TRUE);
-
 	GetDlgItem(IDC_RATE_COMBO)->EnableWindow(TRUE);
-
-
 	OnSavedataButton();   //save data
 
 	CPen	myPen1(PS_SOLID, 1, RGB(0x00, 0x80, 0xFF));
@@ -1129,7 +1120,7 @@ void CFSTView::OnModeButton()
 		{
 
 			AfxMessageBox("模式设置成功");
-			memset(odoDataTosend, 0, sizeof(odoDataTosend));//对odo数组进行初始化
+			//memset(odoDataTosend, 0, sizeof(odoDataTosend));//对odo数组进行初始化
 			WORD wVersionRequested;
 			WSADATA wsaDataMs;
 			int err;
@@ -1259,9 +1250,10 @@ BOOL CFSTView::InitPr100()
 		{
 			memset(&addr, 0, sizeof(addr));
 			addr.sin_family = AF_INET;
-			addr.sin_addr.s_addr = inet_addr("192.168.0.5");
+			//addr.sin_addr.s_addr = inet_addr("192.168.0.5");//发给PR100
+			addr.sin_addr.s_addr = inet_addr("127.0.0.1");//发给回环地址
 			addr.sin_port = htons(5555);
-
+		
 			/*			err=connect(nSocketTcp,(struct sockaddr *)&addr,sizeof(addr));*/
 			if (SOCKET_ERROR == connect(nSocketTcp, (struct sockaddr *)&addr, sizeof(addr)))
 			{
@@ -1455,13 +1447,10 @@ UINT MyThreadProc(LPVOID pParam)
 	{
 		histo1[i] = 0;
 	}
-
 	AD_number = 0;
 	AD_num100 = 0;
-
 	currentDis = startDis;
 	sectionNum = 0;
-
 	int	sendFlag = 0;
 	int    which = 95;
 	int    overPass = 0;
@@ -1505,11 +1494,10 @@ UINT MyThreadProc(LPVOID pParam)
 	{
 		memset(inData, 0, sizeof(inData));  //add by zgliu 2011.03.03
 		for (int i = 0; i < 64 * 16; i += 16)	//模拟适配器加数据位帧头 edit by zwbai 170105
-
 		{
 			inData[i] = 0xFF;
 		}
-											//Ex_Vender_ScanOrPrint(1, 16 * 64);
+		//Ex_Vender_ScanOrPrint(1, 16 * 64);
 		//Ex_ReadData(2, inData, 16 * 64, 600);
 		for (int jj = 0; jj<16 * 64; jj += 16)
 		{
@@ -1544,8 +1532,9 @@ UINT MyThreadProc(LPVOID pParam)
 
 				pulseNum = ((unsigned long)inData[jj + 1] << 24) + ((unsigned long)inData[jj + 2] << 16) + ((unsigned long)inData[jj + 3] << 8) + (unsigned long)inData[jj + 4];
 				//speedNum = ((unsigned int)inData[jj + 5] << 8) + (unsigned int)inData[jj + 6];
-				speedNum = ((unsigned int)(odoDataTosend[2] +odoDataTosend[3] + odoDataTosend[4]));
-				
+				//speedNum = ((unsigned int)(odoDataTosend[2] +odoDataTosend[3] + odoDataTosend[4]));
+				pulseNum = global_odoTotalData;
+				speedNum = global_odoSpeedData;
 				currentPulsenum = pulseNum;
 
 				if (pulseNum == 0)	//added by Cai, 2007-7-9 for V9.0
@@ -1555,9 +1544,9 @@ UINT MyThreadProc(LPVOID pParam)
 					// 				pDC.TextOut(915,520,pp);
 					//add by zgliu 2011.03.03
 					//speedNum = ((unsigned int)inData[jj + 5] << 8) + (unsigned int)inData[jj + 6];
-					speedNum = ((unsigned int)odoDataTosend[2] << 16) + ((unsigned int)odoDataTosend[3] << 8) + ((unsigned int)odoDataTosend[4]);
+					//speedNum = ((unsigned int)odoDataTosend[2] << 16) + ((unsigned int)odoDataTosend[3] << 8) + ((unsigned int)odoDataTosend[4]);
 
-					pView->m_fCurSpeed = speedNum*unit*18/1000;
+					pView->m_fCurSpeed = speedNum*unit*1.8/1000;
 					static unsigned int nCnt = 0;
 					nCnt++;
 					if (20 == nCnt)
@@ -1722,19 +1711,15 @@ UINT MyThreadProc(LPVOID pParam)
 					strEidtValue.Format(_T("%05.2f"), dbVal1);
 					pView->SetDlgItemText(IDC_EDIT_CurDBValue, strEidtValue);
 // 					strEidtValue.Format(_T("%05.1f"), speedNum*unit*0.9 * 2);
-					strEidtValue.Format(_T("%05.1f"), speedNum*unit*18/1000);   //新适配器odo协议
+					strEidtValue.Format(_T("%05.1f"), speedNum*unit*1.8/1000);   //新适配器odo协议
 					pView->SetDlgItemText(IDC_EDIT_CurSpeed, strEidtValue);
 					// add end by zgliu
 				}
+				/*odo speed display edit by zwbai 170307*/
 				CString strEidtValue;
-				strEidtValue.Format(_T("%06.1f"), currentDis / 1000.0);
-				pView->SetDlgItemText(IDC_EDIT_CurMileage, strEidtValue);
-				strEidtValue.Format(_T("%05.2f"), dbVal1);
-				pView->SetDlgItemText(IDC_EDIT_CurDBValue, strEidtValue);
-				// 					strEidtValue.Format(_T("%05.1f"), speedNum*unit*0.9 * 2);
 				strEidtValue.Format(_T("%05.1f"), speedNum*unit * 18);   //新适配器odo协议
 				pView->SetDlgItemText(IDC_EDIT_CurSpeed, strEidtValue);
-
+			
 				//若列车驶出当前显示范围(startKM+15km)，则重新画屏
 				// add by zgliu 2011.04.13
 				if ((currentDis - (atof(startKM) + 15 * delta)*1000.0)*delta > 0.0)
@@ -2300,12 +2285,36 @@ DWORD WINAPI CFSTView::RecvProc_MS(LPVOID lpParameter)
 	CFSTView *pViewMs = ((RECVPARAM*)lpParameter)->m_pView;
 	char msBuffer[300];//数据接收缓冲区
 	int strLen;
-	char tempSerialNumSearch[3];//判断接收流水号
+	char tempSerialNumSearch[32];//判断接收流水号
 	static	int tempSerialNum = 0;
-	int tempSearch;
+	int tempSearch = 0;
 	int i, j;
 	CString strStored;
 	memset(msBuffer, 0, 300);
+	bool tempSerialNumFlag = false;
+	bool speedFlag = false;
+	bool odoTotalFlag = false;
+	bool taxDataFlag = false;
+	bool GpsFlag = false;
+	int flagNum = 0;//用于记录取到的逗号个数
+	int workMode = 0;
+	char odoSpeedDataTosend[10];// odo速度数据 add by yjh
+	char odoTotalDataTosend[32];// odo总里程数据 add by yjh
+	char TaxDataTosend[40];
+	char TaxSpeedTosend[10];
+	int odoSpeedDataTosend_num = 0;
+	int odoTotalDataTosend_num = 0;
+	int TaxDataTosend_num = 0;
+	int TaxSpeedTosend_num = 0;
+	memset(tempSerialNumSearch, 0,32);
+	memset(odoSpeedDataTosend, 0, 10);
+	memset(odoTotalDataTosend, 0, 32);
+
+
+	int serialNum = 0;
+	int odoSpeedData_num = 0;
+	int odoTotalData_num = 0;
+
 	while (true)
 	{
 		strLen = recv(sockMs, msBuffer, 300, 0);
@@ -2318,28 +2327,51 @@ DWORD WINAPI CFSTView::RecvProc_MS(LPVOID lpParameter)
 		switch (nWorkMode)
 		{
 		case 0://ODO
-			if (-1 != strStored.Find("$ODO"))
+			if (-1 != strStored.Find("$DATA"))
 			{
 				for (j = 0, i = 0; msBuffer[i] != 0x0d; i++, j++)
 				{
-					odoData[j] = msBuffer[i + 4];
+					odoData[j] = msBuffer[i + 5];//从$DATA,之后开始赋值
 				}
-				for (j = 0; odoData[j] != 0x0d; j++)
+				//memset(tempSerialNumSearch, 0, 32);
+				for (j = 0; odoData[j] != 0x0d; j++)//此处对数据进行解包
 				{
-					if (0x2c == odoData[j])//流水号前面和后面有都有一个逗号
+					if (0x2c == odoData[j])
 					{
-						memset(tempSerialNumSearch, 0, 3);
-						for (tempSearch = j + 1, i = 0; odoData[tempSearch] != 0x2c; tempSearch++, i++)
-						{
-							tempSerialNumSearch[i] = odoData[tempSearch];
-						}
-						break;
+						j++;
+						flagNum++;
+					}	
+					if (flagNum == 1)//放流水号
+					{
+						tempSerialNumSearch[tempSearch] = odoData[j];
+						serialNum = atoi(tempSerialNumSearch);
+						tempSearch++;
 					}
+					if (flagNum == 2)//set mode
+					{
+						workMode = (int)(odoData[j]-'0');
+					}
+					if (flagNum == 3)//放odoSpeed
+					{
+						odoSpeedDataTosend[odoSpeedDataTosend_num] = odoData[j];
+						odoSpeedData_num = atoi(odoSpeedDataTosend);
+						odoSpeedDataTosend_num++;
+					}
+					if (flagNum == 4)//放odo总脉冲数
+					{
+						odoTotalDataTosend[odoTotalDataTosend_num] = odoData[j];
+						odoTotalData_num = atoi(odoTotalDataTosend);
+						odoTotalDataTosend_num++;
+					}		
 				}
-				tempSerialNum = atoi(tempSerialNumSearch);
-				odoDataTosend[2] = odoData[tempSearch + 1];
-				odoDataTosend[3] = odoData[tempSearch + 2];
-				odoDataTosend[4] = odoData[tempSearch + 3];//这部分是取ODO脉冲信息
+				//tempSerialNum = atoi(tempSerialNumSearch);
+				global_odoSpeedData = odoSpeedData_num;//用于全局传送的odo速度值
+				global_odoTotalData = odoTotalData_num;
+				flagNum = 0;
+				odoSpeedDataTosend_num = 0;
+				odoTotalDataTosend_num = 0;
+				tempSearch = 0;
+
 			}
 			break;
 		case 1://TAX
