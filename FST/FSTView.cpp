@@ -1335,14 +1335,14 @@ BOOL CFSTView::InitPr100()
 				send(nSocketTcp, "TRAC:UDP:DEF:FLAG:ON \"172.17.75.2\",19000,\"VOLT:AC\"\n", \
 					strlen("TRAC:UDP:DEF:FLAG:ON \"172.17.75.2\",19000,\"VOLT:AC\"\n"), 0);
 				*/
-				send(nSocketTcp, "TRAC:UDP:DEF:FLAG:ON \"192.168.0.201\",19000,\"VOLT:AC\"\n", \
-					strlen("TRAC:UDP:DEF:FLAG:ON \"192.168.0.201\",19000,\"VOLT:AC\"\n"), 0);
+				send(nSocketTcp, "TRAC:UDP:DEF:FLAG:ON \"192.168.0.7\",19000,\"VOLT:AC\"\n", \
+					strlen("TRAC:UDP:DEF:FLAG:ON \"192.168.0.7\",19000,\"VOLT:AC\"\n"), 0);
 				Sleep(50);
 				//
 				/*send(nSocketTcp, "TRAC:UDP:DEF:TAG:ON \"172.17.75.2\",19000,MSC\n", \
 					strlen("TRAC:UDP:DEF:TAG:ON \"172.17.75.2\",19000,MSC\n"), 0);*/
-				send(nSocketTcp, "TRAC:UDP:DEF:TAG:ON \"192.168.0.201\",19000,MSC\n", \
-					strlen("TRAC:UDP:DEF:TAG:ON \"192.168.0.201\",19000,MSC\n"), 0);
+				send(nSocketTcp, "TRAC:UDP:DEF:TAG:ON \"192.168.0.7\",19000,MSC\n", \
+					strlen("TRAC:UDP:DEF:TAG:ON \"192.168.0.7\",19000,MSC\n"), 0);
 				Sleep(50);
 				send(nSocketTcp, "INIT:CONM\n", strlen("INIT:CONM\n"), 0);
 				closesocket(nSocketTcp);
@@ -1381,7 +1381,6 @@ BOOL CFSTView::InitPr100()
 UINT MyThreadProc(LPVOID pParam)
 {
 	unsigned long	histo1[4100];
-
 	int				speed0 = 80;
 	CString			m_proption;
 
@@ -1427,7 +1426,8 @@ UINT MyThreadProc(LPVOID pParam)
 	float	dbVal1, cal_voltage, cal_dbval;
 
 	unsigned char inData[64 * 16];
-	unsigned long pulseNum, prePulseNum;
+	long pulseNum = 0;
+	long prePulseNum = 0;
 	unsigned int  speedNum;
 	//unsigned int  vol1;
 	short	vol1;
@@ -1490,54 +1490,16 @@ UINT MyThreadProc(LPVOID pParam)
 	////////////////////////////////////////////////
 	//add by bzw 161111 start
 	int dataready_flag = 0;
+	int pre_global_odoTotalData = 0;
+	int odoCountNum = 0;
 	while (readStatus == 1) //&& AD_number<40000
 	{
-		memset(inData, 0, sizeof(inData));  //add by zgliu 2011.03.03
-		for (int i = 0; i < 64 * 16; i += 16)	//模拟适配器加数据位帧头 edit by zwbai 170105
-		{
-			inData[i] = 0xFF;
-		}
-		//Ex_Vender_ScanOrPrint(1, 16 * 64);
-		//Ex_ReadData(2, inData, 16 * 64, 600);
-		for (int jj = 0; jj<16 * 64; jj += 16)
-		{
-			/*
-			if(inData[jj]==0x00)
-			{
-			speedNum=((unsigned int)inData[jj+5]<<8)+(unsigned int)inData[jj+6];
-			sprintf(pp,"%05.1f", speedNum*unit*1.8); //0.9); //???
-			pDC.TextOut(915,520,pp);
-			}
-			//		else if((inData[jj]==0xFF)&&(inData[jj+1] != 0x81)) // for field strength data only
-			else*/
-			if (inData[jj] == 0xFF) // for field strength data only
-			{
-				checkByte = 0;
-				char pptmp[100], pptmp1[5];
-				//			sprintf(pptmp, "ID:%02x", inData[jj]);
-				sprintf(pptmp, ":");
-				for (int ii = 1; ii<15; ii++)
-				{
-					//				sprintf(pptmp1, " %02x", inData[ii+jj]);
-					//				strcat(pptmp, pptmp1);
-					checkByte += inData[ii + jj];
-				}
-				//			sprintf(pptmp1, " %02X", inData[ii+jj]);
-				//			strcat(pptmp, pptmp1);
-				if (checkByte != inData[jj + 15])
-				{
-					sprintf(pp, "Checking:%02x %02x,%s", checkByte, inData[jj + 15], pptmp);
-					//		    	m_wndStatusBar.SetPaneText(0,pp,TRUE);
-				}
 
-				pulseNum = ((unsigned long)inData[jj + 1] << 24) + ((unsigned long)inData[jj + 2] << 16) + ((unsigned long)inData[jj + 3] << 8) + (unsigned long)inData[jj + 4];
-				//speedNum = ((unsigned int)inData[jj + 5] << 8) + (unsigned int)inData[jj + 6];
-				//speedNum = ((unsigned int)(odoDataTosend[2] +odoDataTosend[3] + odoDataTosend[4]));
 				pulseNum = global_odoTotalData;
 				speedNum = global_odoSpeedData;
-				currentPulsenum = pulseNum;
-
-				if (pulseNum == 0)	//added by Cai, 2007-7-9 for V9.0
+				//currentPulsenum = pulseNum;
+				
+				if (pulseNum == prePulseNum)	//added by Cai, 2007-7-9 for V9.0
 				{
 					// 				speedNum=((unsigned int)inData[jj+5]<<8)+(unsigned int)inData[jj+6];
 					// 				sprintf(pp,"%05.1f", speedNum*unit*1.8);//0.9); 
@@ -1559,68 +1521,28 @@ UINT MyThreadProc(LPVOID pParam)
 					//add end by zgliu 2011.03.03
 					continue;
 				}
-				AD_number++;
-				
-				currentDis = startDis + delta*AD_number*unit;
-				diffNum = pulseNum - prePulseNum;
-				if ((AD_number>2) && (diffNum != pulseDivision))   //pulseDivision=2
+				for (int i = prePulseNum; i < pulseNum; i++)
 				{
-					/*for (int i = 0;i<(diffNum/2);i++)
+					if ((i%2)==0)//二分频
 					{
-					AD_number++;
-					if((AD_number%pulse100M)==0)
-					flagNum = 1;
-					}*/
-					sprintf(pp, "Missing: %06d %04d %06d  %08x  %08x", speedNum, inData[jj], AD_number, pulseNum, prePulseNum);
-					pDC.TextOut(400, 250, pp);
-					//		  	  m_wndStatusBar.SetPaneText(0,pp,TRUE);
-				}
-				else
-				{
+						AD_number++;
+					}
+					else{
+						continue;
+					}
+					currentDis = startDis + delta*AD_number*unit;
 					sprintf(pp, "Correct:%06d  %06d  %08x  %08x, %02d", speedNum, AD_number, pulseNum, prePulseNum, pulseNum - prePulseNum);
 					pDC.TextOut(400, 350, pp);
-				}
-				currentDis = startDis + delta*AD_number*unit;
-				prePulseNum = pulseNum;
-				//			if(((AD_number>0) && ((AD_number%pulse100M)==0))||((AD_number>0) && (flagNum = 1)))
-				if ((AD_number>0))
-					if (((AD_number%pulse100M) == 0) || (flagNum == TRUE))
+				
+					currentDis = startDis + delta*AD_number*unit;
+					prePulseNum = pulseNum;
+					//			if(((AD_number>0) && ((AD_number%pulse100M)==0))||((AD_number>0) && (flagNum = 1)))
+					if (((AD_number%pulse100M) == 0))
 					{
+						//满足100米开始画图
 						m_FSTbLocked = true;		//取场强值，不可写
-
 						flagNum = false;
-						/*
-						kk=0;
-						count=0;
-						//while((count<pulse95)&&(kk<4096))
-						while((count<pulse95)&&(kk<1000))
-						count+=histo1[kk++];
-						//data1[AD_num100].AD_95 = AD2dB(kk-1);	//including loss_voltage
-						data1[AD_num100].AD_95= AD2dB(vol1);
-
-						//while((count<pulse90)&&(kk<4096))
-						while((count<pulse90)&&(kk<1000))
-						count+=histo1[kk++];
-						//data1[AD_num100].AD_90 = AD2dB(kk-1);
-						data1[AD_num100].AD_90= AD2dB(vol1);
-
-						//while((count<pulse50)&&(kk<4096))
-						while((count<pulse50)&&(kk<1000))
-						count+=histo1[kk++];
-						//data1[AD_num100].AD_50 = AD2dB(kk-1);
-						data1[AD_num100].AD_50= AD2dB(vol1);
-						*/
-						/*
-						//added for calibration work
-						cal_voltage = 10.0*(kk-1)/4095;
-						cal_dbval = data1[AD_num100].AD_50;
-						sprintf(pp,"%05.2fdB %fV", cal_dbval, cal_voltage);
-						m_wndStatusBar.SetPaneText(1,pp,TRUE);
-						//end
-						*/
-						data1[AD_num100].curPos = (int)startDis + (delta*AD_num100) * 100; //???
-																						   /// added by cai (2006.3.26)
-
+						data1[AD_num100].curPos = (int)startDis + (delta*AD_num100) * 100; 
 						sprintf(pp, "dB: %6.2f %6.2f  %6.2f", data1[AD_num100].AD_95,
 							data1[AD_num100].AD_90, data1[AD_num100].AD_50);
 
@@ -1629,28 +1551,7 @@ UINT MyThreadProc(LPVOID pParam)
 						fusiondata[AD_num100].lat = currentLat;
 						fusiondata[AD_num100].lon = currentLon;
 
-						pDC.TextOut(750, 550, pp);
-
-						//////////////////////////////////////////////
-						/*
-						if(which==95)
-						{
-						dbVal1=data1[AD_num100].AD_95;
-						}
-						else if(which==90)
-						{
-						dbVal1=data1[AD_num100].AD_90;
-						}
-						else
-						{
-						dbVal1=data1[AD_num100].AD_50;
-						}
-
-						for(int i=0; i<4096; i++)
-						{
-						histo1[i]=0;
-						}
-						*/
+						pDC.TextOut(750, 550, pp);						
 						dbVal1 = dbvalue_global;
 						AD_value1[AD_num100] = dbVal1;
 
@@ -1662,243 +1563,221 @@ UINT MyThreadProc(LPVOID pParam)
 
 						AD_num100++;
 						sectionNum++;
-					//////////////// Update position of the train and draw the curve ///////////
-					// modified by zgliu 2011.04.14, 将原来的每100米2个像素点改为6个
-					// 先覆盖旧车再画当前位置的小车
-					pDC1.LineTo(nDrawRangeXMin + nPix100m*sectionNum, 410 - (int)(dbVal1)* 4);
-					pDC1.FillSolidRect(nDrawRangeXMin - 30 + sectionNum*nPix100m - nPix100m, 455, 30, 16, 0xFFFFFF);
-					pDC1.BitBlt(nDrawRangeXMin - 30 + sectionNum*nPix100m, 458, 30, 13, &pDC1, 345, 30, SRCCOPY);
-					AD_num100++;
-					sectionNum++;
-					// Draw line at the front of train  
-					// 		   pOldPen = pDC.SelectObject(&myPenTrainPos);
-					// 		   pDC.MoveTo(nDrawRangeXMin+nPix100m*sectionNum-nPix100m, 50);
-					// 		   pDC.LineTo(nDrawRangeXMin+nPix100m*sectionNum-nPix100m, 458);
-					// 		   pDC.MoveTo(nDrawRangeXMin+nPix100m*sectionNum, 50);
-					// 		   pDC.LineTo(nDrawRangeXMin+nPix100m*sectionNum, 458);
-					// 		   pDC.SelectObject(pOldPen);
+						//////////////// Update position of the train and draw the curve ///////////
+						// modified by zgliu 2011.04.14, 将原来的每100米2个像素点改为6个
+						// 先覆盖旧车再画当前位置的小车
+						pDC1.LineTo(nDrawRangeXMin + nPix100m*sectionNum, 410 - (int)(dbVal1)* 4);
+						pDC1.FillSolidRect(nDrawRangeXMin - 30 + sectionNum*nPix100m - nPix100m, 455, 30, 16, 0xFFFFFF);
+						pDC1.BitBlt(nDrawRangeXMin - 30 + sectionNum*nPix100m, 458, 30, 13, &pDC1, 345, 30, SRCCOPY);
 
-					// modified end by zgliu 
-					////////////////////////////////////////////
-
-
-
-					// delete by zgliu 2011.03.03                
-					// 				pDC.TextOut(400,520,"当前里程:               km");
-					// 				pDC.TextOut(630,520,"场强统计:               dB");
-					// 		 	    pDC.TextOut(860,520,"当前车速:            km/h");
-					// 
-					// 				//display current Distance   
-					// 				sprintf(pp,"%06.1f", currentDis/1000.0); 
-					// 	 			pDC.TextOut(460,520,pp);
-					// 
-					// 
-					// 			//	sprintf(pp,"%ld %d %06.1f",AD_number,pulseNum, pulseNum*unit); 
-					// 	 		//	pDC.TextOut(460,545,pp);
-					// 
-					// 	            sprintf(pp,"%05.2f", dbVal1); 
-					// 	 			pDC.TextOut(690,520,pp);
-					// 
-					// 				sprintf(pp,"%05.1f", speedNum*unit*1.8);	//3.6/pulseDivision=0.9; //1.8); //???
-					// 	 			pDC.TextOut(915,520,pp);			
-					// delete end by zgliu 
-
-					//add by zgliu 2011.03.03 
-					//送往主界面更新显示
+						//送往主界面更新显示
+						CString strEidtValue;
+						strEidtValue.Format(_T("%06.1f"), currentDis / 1000.0);
+						pView->SetDlgItemText(IDC_EDIT_CurMileage, strEidtValue);
+						strEidtValue.Format(_T("%05.2f"), dbVal1);
+						pView->SetDlgItemText(IDC_EDIT_CurDBValue, strEidtValue);
+						// 					strEidtValue.Format(_T("%05.1f"), speedNum*unit*0.9 * 2);
+						strEidtValue.Format(_T("%05.1f"), speedNum*unit*1.8 / 1000);   //新适配器odo协议
+						pView->SetDlgItemText(IDC_EDIT_CurSpeed, strEidtValue);
+						// add end by zgliu
+					}
+					/*odo speed display edit by zwbai 170307*/
 					CString strEidtValue;
-					strEidtValue.Format(_T("%06.1f"), currentDis / 1000.0);
-					pView->SetDlgItemText(IDC_EDIT_CurMileage, strEidtValue);
-					strEidtValue.Format(_T("%05.2f"), dbVal1);
-					pView->SetDlgItemText(IDC_EDIT_CurDBValue, strEidtValue);
-// 					strEidtValue.Format(_T("%05.1f"), speedNum*unit*0.9 * 2);
-					strEidtValue.Format(_T("%05.1f"), speedNum*unit*1.8/1000);   //新适配器odo协议
+					strEidtValue.Format(_T("%05.1f"), speedNum*unit * 18);   //新适配器odo协议
 					pView->SetDlgItemText(IDC_EDIT_CurSpeed, strEidtValue);
-					// add end by zgliu
-				}
-				/*odo speed display edit by zwbai 170307*/
-				CString strEidtValue;
-				strEidtValue.Format(_T("%05.1f"), speedNum*unit * 18);   //新适配器odo协议
-				pView->SetDlgItemText(IDC_EDIT_CurSpeed, strEidtValue);
-			
-				//若列车驶出当前显示范围(startKM+15km)，则重新画屏
-				// add by zgliu 2011.04.13
-				if ((currentDis - (atof(startKM) + 15 * delta)*1000.0)*delta > 0.0)
-				{
-					// 				pDC.SetBkMode(OPAQUE);
-					// 				pDC.SetROP2(nOldDrawMode);
-					pDC.FillSolidRect(nDrawRangeXMin + 1, 50, nDrawRangeXMax - nDrawRangeXMin - 2, 450 - 50, 0xFFFFFF); // Rectangle(80+1, 48+1, 950-1, 451-1);
 
-					pDC.SelectObject(&myPen0);
-					for (int i = 0; i<10; i++)
+					//若列车驶出当前显示范围(startKM+15km)，则重新画屏
+					// add by zgliu 2011.04.13
+					if ((currentDis - (atof(startKM) + 15 * delta)*1000.0)*delta > 0.0)
 					{
-						pDC.MoveTo(nDrawRangeXMin, 50 + i * 40);
-						pDC.LineTo(nDrawRangeXMax, 50 + i * 40);
-					}
-					const int nPix1KM = nPix500M * 2;
-					for (int i = 1; i <= nKMDisplayNum; i++)
-					{
-						pDC.MoveTo(nDrawRangeXMin + i*nPix500M, 50);
-						pDC.LineTo(nDrawRangeXMin + i*nPix500M, 450);
-					}
+						// 				pDC.SetBkMode(OPAQUE);
+						// 				pDC.SetROP2(nOldDrawMode);
+						pDC.FillSolidRect(nDrawRangeXMin + 1, 50, nDrawRangeXMax - nDrawRangeXMin - 2, 450 - 50, 0xFFFFFF); // Rectangle(80+1, 48+1, 950-1, 451-1);
 
-					pDC.SelectObject(&myPen3);
-					int	maintance = atoi(pView->m_maintance);
-					pDC.MoveTo(nDrawRangeXMin, 450 - maintance * 4 - 40);
-					pDC.LineTo(nDrawRangeXMax, 450 - maintance * 4 - 40);
-
-					pDC.FillSolidRect(nDrawRangeXMin - 35, 455, nDrawRangeXMax - nDrawRangeXMin + 20, 55, 0xFFFFFF);
-
-					sectionNum = 0;
-					currentName = _T("");
-					nextName = CString(stationName[nextStation]);
-					nextCode.Format("%d", stationNum[nextStation]);
-					float fRangeStart = currentDis / 1000;
-					startKM.Format("%6.2f", fRangeStart);
-					nextKM.Format("%6.2f", stationDis[nextStation]);
-					offset = (int)(fabs(fRangeStart - stationDis[nextStation])*nPix1KM);
-
-					pDC.TextOut(nDrawRangeXMin - 5 - 15, 460 + 10, startKM);
-					pDC.TextOut(nDrawRangeXMin - 5 + offset, 460 + 10, nextKM);
-					pDC.TextOut(nDrawRangeXMin - 5 + offset, 480 + 10, nextName + nextCode);
-
-					DisplayOthers(&pDC, startKM, nextKM);
-
-					// 每1KM显示一个刻度值
-					CFont myKMFont;
-					myKMFont.CreateFont(15, 5, 0, 0, FW_NORMAL, 0, 0, 0, ANSI_CHARSET,
-						OUT_DEVICE_PRECIS, VARIABLE_PITCH | FF_ROMAN, PROOF_QUALITY, 0, _T("ROMAN"));
-					pOldFont = pDC.SelectObject(&myKMFont);
-					const int nDeltaKM = offset / nPix1KM;
-					CString strTempKM;
-					for (int i = 1; i <= nDeltaKM; ++i)
-					{
-						if (i <= (nKMDisplayNum + 1) / 2)
+						pDC.SelectObject(&myPen0);
+						for (int i = 0; i<10; i++)
 						{
-							if (-1 != pView->m_updown.Find(_T("增加")))
-							{
-								strTempKM.Format(_T("%0.2f"), atof(startKM) + i);
-							}
-							else if (-1 != pView->m_updown.Find(_T("减少")))
-							{
-								strTempKM.Format(_T("%0.2f"), atof(startKM) - i);
-							}
-							pDC.SetTextColor(RGB(0x00, 0x00, 0x00));
-							pDC.TextOut(nDrawRangeXMin - 8 + nPix1KM*i, 455, strTempKM);
+							pDC.MoveTo(nDrawRangeXMin, 50 + i * 40);
+							pDC.LineTo(nDrawRangeXMax, 50 + i * 40);
 						}
-					}
-					pDC.SelectObject(pOldFont);
-
-					pOldPen = pDC.SelectObject(&myPen2);
-					pDC.MoveTo(nDrawRangeXMin + offset / 2, 445);
-					pDC.LineTo(nDrawRangeXMin + offset / 2, 450);
-					pDC.MoveTo(nDrawRangeXMin + offset, 50);
-					pDC.LineTo(nDrawRangeXMin + offset, 450);
-
-					pDC.SetTextColor(RGB(0xFF, 0x00, 0xFF));
-					// 				pDC.SetBkMode(TRANSPARENT);
-					// 				pDC.SetROP2(R2_XORPEN);
-				}
-				// add end by zgliu 
-
-				if (((nextStation>stationCount) && (delta>0)) || ((nextStation<0) && (delta<0)))
-				{
-					if (overPass == 0)
-					{
-						pDC.TextOut(360, 180, _T(" 已到该线路的终点站,请停止测试,重新选择线路!"));
-						overPass = 1;
-						readStatus = 0;
-						Pr100ProcFlag = 0;
-						AfxMessageBox(_T("!!!!!!!!!!!!!完成测试!!!!!!!!!!!!!!!!!!!!!"));
-					}
-				}
-				else if ((currentDis - stationDis[nextStation] * 1000.0)*delta>0.0) //列车驶入下一站
-				{
-					// 				pDC.SetBkMode(OPAQUE);
-					// 				pDC.SetROP2(nOldDrawMode);
-
-					pDC.FillSolidRect(nDrawRangeXMin + 1, 50, nDrawRangeXMax - nDrawRangeXMin - 2, 400, 0xFFFFFF); // Rectangle(80+1, 48+1, 950-1, 451-1);
-
-					pDC.SelectObject(&myPen0);
-					for (int i = 0; i<10; i++)
-					{
-						pDC.MoveTo(nDrawRangeXMin, 50 + i * 40);
-						pDC.LineTo(nDrawRangeXMax, 50 + i * 40);
-					}
-					const int nPix1KM = nPix500M * 2;
-					for (int i = 1; i <= nKMDisplayNum; i++)
-					{
-						pDC.MoveTo(nDrawRangeXMin + i*nPix500M, 50);
-						pDC.LineTo(nDrawRangeXMin + i*nPix500M, 450);
-					}
-
-					pDC.SelectObject(&myPen3);
-					int	maintance = atoi(pView->m_maintance);
-					pDC.MoveTo(nDrawRangeXMin, 450 - maintance * 4 - 40);
-					pDC.LineTo(nDrawRangeXMax, 450 - maintance * 4 - 40);
-
-
-					pDC.FillSolidRect(nDrawRangeXMin - 35, 455, nDrawRangeXMax - nDrawRangeXMin + 20, 55, 0xFFFFFF);
-
-					currentStation += delta;
-					nextStation += delta;
-
-					sectionNum = 0;
-					currentName = CString(stationName[currentStation]);
-					nextName = CString(stationName[nextStation]);
-					currentCode.Format("%d", stationNum[currentStation]);
-					nextCode.Format("%d", stationNum[nextStation]);
-					startKM.Format("%6.2f", stationDis[currentStation]);
-					nextKM.Format("%6.2f", stationDis[nextStation]);
-					offset = (int)(fabs(stationDis[currentStation] - stationDis[nextStation])*nPix1KM);
-
-
-					pDC.TextOut(nDrawRangeXMin - 5 - 15, 460 + 10, startKM);
-					pDC.TextOut(nDrawRangeXMin - 5 + offset, 460 + 10, nextKM);
-
-					pDC.TextOut(nDrawRangeXMin - 5 - 15, 480 + 10, currentName + currentCode);
-					pDC.TextOut(nDrawRangeXMin - 5 + offset, 480 + 10, nextName + nextCode);
-
-					DisplayOthers(&pDC, startKM, nextKM);
-
-					// add by zgliu 2011.04.13 
-					// 每1KM显示一个刻度值
-					CFont myKMFont;
-					myKMFont.CreateFont(15, 5, 0, 0, FW_NORMAL, 0, 0, 0, ANSI_CHARSET,
-						OUT_DEVICE_PRECIS, VARIABLE_PITCH | FF_ROMAN, PROOF_QUALITY, 0, _T("ROMAN"));
-					pOldFont = pDC.SelectObject(&myKMFont);
-					const int nDeltaKM = offset / nPix1KM;
-					CString strTempKM;
-					for (int i = 1; i <= nDeltaKM; ++i)
-					{
-						if (i <= (nKMDisplayNum + 1) / 2)
+						const int nPix1KM = nPix500M * 2;
+						for (int i = 1; i <= nKMDisplayNum; i++)
 						{
-							if (-1 != pView->m_updown.Find(_T("增加")))
-							{
-								strTempKM.Format(_T("%0.2f"), atof(startKM) + i);
-							}
-							else if (-1 != pView->m_updown.Find(_T("减少")))
-							{
-								strTempKM.Format(_T("%0.2f"), atof(startKM) - i);
-							}
-							pDC.SetTextColor(RGB(0x00, 0x00, 0x00));
-							pDC.TextOut(nDrawRangeXMin - 8 + nPix1KM*i, 455, strTempKM);
+							pDC.MoveTo(nDrawRangeXMin + i*nPix500M, 50);
+							pDC.LineTo(nDrawRangeXMin + i*nPix500M, 450);
 						}
+
+						pDC.SelectObject(&myPen3);
+						int	maintance = atoi(pView->m_maintance);
+						pDC.MoveTo(nDrawRangeXMin, 450 - maintance * 4 - 40);
+						pDC.LineTo(nDrawRangeXMax, 450 - maintance * 4 - 40);
+
+						pDC.FillSolidRect(nDrawRangeXMin - 35, 455, nDrawRangeXMax - nDrawRangeXMin + 20, 55, 0xFFFFFF);
+
+						sectionNum = 0;
+						currentName = _T("");
+						nextName = CString(stationName[nextStation]);
+						nextCode.Format("%d", stationNum[nextStation]);
+						float fRangeStart = currentDis / 1000;
+						startKM.Format("%6.2f", fRangeStart);
+						nextKM.Format("%6.2f", stationDis[nextStation]);
+						offset = (int)(fabs(fRangeStart - stationDis[nextStation])*nPix1KM);
+
+						pDC.TextOut(nDrawRangeXMin - 5 - 15, 460 + 10, startKM);
+						pDC.TextOut(nDrawRangeXMin - 5 + offset, 460 + 10, nextKM);
+						pDC.TextOut(nDrawRangeXMin - 5 + offset, 480 + 10, nextName + nextCode);
+
+						DisplayOthers(&pDC, startKM, nextKM);
+
+						// 每1KM显示一个刻度值
+						CFont myKMFont;
+						myKMFont.CreateFont(15, 5, 0, 0, FW_NORMAL, 0, 0, 0, ANSI_CHARSET,
+							OUT_DEVICE_PRECIS, VARIABLE_PITCH | FF_ROMAN, PROOF_QUALITY, 0, _T("ROMAN"));
+						pOldFont = pDC.SelectObject(&myKMFont);
+						const int nDeltaKM = offset / nPix1KM;
+						CString strTempKM;
+						for (int i = 1; i <= nDeltaKM; ++i)
+						{
+							if (i <= (nKMDisplayNum + 1) / 2)
+							{
+								if (-1 != pView->m_updown.Find(_T("增加")))
+								{
+									strTempKM.Format(_T("%0.2f"), atof(startKM) + i);
+								}
+								else if (-1 != pView->m_updown.Find(_T("减少")))
+								{
+									strTempKM.Format(_T("%0.2f"), atof(startKM) - i);
+								}
+								pDC.SetTextColor(RGB(0x00, 0x00, 0x00));
+								pDC.TextOut(nDrawRangeXMin - 8 + nPix1KM*i, 455, strTempKM);
+							}
+						}
+						pDC.SelectObject(pOldFont);
+
+						pOldPen = pDC.SelectObject(&myPen2);
+						pDC.MoveTo(nDrawRangeXMin + offset / 2, 445);
+						pDC.LineTo(nDrawRangeXMin + offset / 2, 450);
+						pDC.MoveTo(nDrawRangeXMin + offset, 50);
+						pDC.LineTo(nDrawRangeXMin + offset, 450);
+
+						pDC.SetTextColor(RGB(0xFF, 0x00, 0xFF));
+						// 				pDC.SetBkMode(TRANSPARENT);
+						// 				pDC.SetROP2(R2_XORPEN);
 					}
-					pDC.SelectObject(pOldFont);
 					// add end by zgliu 
 
-					pOldPen = pDC.SelectObject(&myPen2);
-					pDC.MoveTo(nDrawRangeXMin + offset / 2, 445);
-					pDC.LineTo(nDrawRangeXMin + offset / 2, 450);
-					pDC.MoveTo(nDrawRangeXMin + offset, 50);
-					pDC.LineTo(nDrawRangeXMin + offset, 450);
-					pDC.SetTextColor(RGB(0xFF, 0x00, 0xFF));
-				 	// 				pDC.SetBkMode(TRANSPARENT);
-					// 				pDC.SetROP2(R2_XORPEN);
-					sendFlag = 0;   //allow send timeCode and addressCode again
+					if (((nextStation>stationCount) && (delta>0)) || ((nextStation<0) && (delta<0)))
+					{
+						if (overPass == 0)
+						{
+							pDC.TextOut(360, 180, _T(" 已到该线路的终点站,请停止测试,重新选择线路!"));
+							overPass = 1;
+							readStatus = 0;
+							Pr100ProcFlag = 0;
+							AfxMessageBox(_T("!!!!!!!!!!!!!完成测试!!!!!!!!!!!!!!!!!!!!!"));
+						}
+					}
+					else if ((currentDis - stationDis[nextStation] * 1000.0)*delta>0.0) //列车驶入下一站
+					{
+						// 				pDC.SetBkMode(OPAQUE);
+						// 				pDC.SetROP2(nOldDrawMode);
+
+						pDC.FillSolidRect(nDrawRangeXMin + 1, 50, nDrawRangeXMax - nDrawRangeXMin - 2, 400, 0xFFFFFF); // Rectangle(80+1, 48+1, 950-1, 451-1);
+
+						pDC.SelectObject(&myPen0);
+						for (int i = 0; i<10; i++)
+						{
+							pDC.MoveTo(nDrawRangeXMin, 50 + i * 40);
+							pDC.LineTo(nDrawRangeXMax, 50 + i * 40);
+						}
+						const int nPix1KM = nPix500M * 2;
+						for (int i = 1; i <= nKMDisplayNum; i++)
+						{
+							pDC.MoveTo(nDrawRangeXMin + i*nPix500M, 50);
+							pDC.LineTo(nDrawRangeXMin + i*nPix500M, 450);
+						}
+
+						pDC.SelectObject(&myPen3);
+						int	maintance = atoi(pView->m_maintance);
+						pDC.MoveTo(nDrawRangeXMin, 450 - maintance * 4 - 40);
+						pDC.LineTo(nDrawRangeXMax, 450 - maintance * 4 - 40);
+
+
+						pDC.FillSolidRect(nDrawRangeXMin - 35, 455, nDrawRangeXMax - nDrawRangeXMin + 20, 55, 0xFFFFFF);
+
+						currentStation += delta;
+						nextStation += delta;
+
+						sectionNum = 0;
+						currentName = CString(stationName[currentStation]);
+						nextName = CString(stationName[nextStation]);
+						currentCode.Format("%d", stationNum[currentStation]);
+						nextCode.Format("%d", stationNum[nextStation]);
+						startKM.Format("%6.2f", stationDis[currentStation]);
+						nextKM.Format("%6.2f", stationDis[nextStation]);
+						offset = (int)(fabs(stationDis[currentStation] - stationDis[nextStation])*nPix1KM);
+
+
+						pDC.TextOut(nDrawRangeXMin - 5 - 15, 460 + 10, startKM);
+						pDC.TextOut(nDrawRangeXMin - 5 + offset, 460 + 10, nextKM);
+
+						pDC.TextOut(nDrawRangeXMin - 5 - 15, 480 + 10, currentName + currentCode);
+						pDC.TextOut(nDrawRangeXMin - 5 + offset, 480 + 10, nextName + nextCode);
+
+						DisplayOthers(&pDC, startKM, nextKM);
+
+						// add by zgliu 2011.04.13 
+						// 每1KM显示一个刻度值
+						CFont myKMFont;
+						myKMFont.CreateFont(15, 5, 0, 0, FW_NORMAL, 0, 0, 0, ANSI_CHARSET,
+							OUT_DEVICE_PRECIS, VARIABLE_PITCH | FF_ROMAN, PROOF_QUALITY, 0, _T("ROMAN"));
+						pOldFont = pDC.SelectObject(&myKMFont);
+						const int nDeltaKM = offset / nPix1KM;
+						CString strTempKM;
+						for (int i = 1; i <= nDeltaKM; ++i)
+						{
+							if (i <= (nKMDisplayNum + 1) / 2)
+							{
+								if (-1 != pView->m_updown.Find(_T("增加")))
+								{
+									strTempKM.Format(_T("%0.2f"), atof(startKM) + i);
+								}
+								else if (-1 != pView->m_updown.Find(_T("减少")))
+								{
+									strTempKM.Format(_T("%0.2f"), atof(startKM) - i);
+								}
+								pDC.SetTextColor(RGB(0x00, 0x00, 0x00));
+								pDC.TextOut(nDrawRangeXMin - 8 + nPix1KM*i, 455, strTempKM);
+							}
+						}
+						pDC.SelectObject(pOldFont);
+						// add end by zgliu 
+
+						pOldPen = pDC.SelectObject(&myPen2);
+						pDC.MoveTo(nDrawRangeXMin + offset / 2, 445);
+						pDC.LineTo(nDrawRangeXMin + offset / 2, 450);
+						pDC.MoveTo(nDrawRangeXMin + offset, 50);
+						pDC.LineTo(nDrawRangeXMin + offset, 450);
+						pDC.SetTextColor(RGB(0xFF, 0x00, 0xFF));
+						// 				pDC.SetBkMode(TRANSPARENT);
+						// 				pDC.SetROP2(R2_XORPEN);
+						sendFlag = 0;   //allow send timeCode and addressCode again
+					}
+
+
+
+
+
+
+
+
+
+
+					
 				}
-			}
-		}
+				
+				
+		
 	}
 
 	if (sim_flag)
@@ -2314,6 +2193,9 @@ DWORD WINAPI CFSTView::RecvProc_MS(LPVOID lpParameter)
 	int serialNum = 0;
 	int odoSpeedData_num = 0;
 	int odoTotalData_num = 0;
+	int preoOdoTotalData_num = 0;
+	int count_odo = 0;
+	int diff_odo = 0;
 
 	while (true)
 	{
@@ -2362,9 +2244,9 @@ DWORD WINAPI CFSTView::RecvProc_MS(LPVOID lpParameter)
 						odoTotalDataTosend[odoTotalDataTosend_num] = odoData[j];
 						odoTotalData_num = atoi(odoTotalDataTosend);
 						odoTotalDataTosend_num++;
-					}		
+					}
 				}
-				//tempSerialNum = atoi(tempSerialNumSearch);
+
 				global_odoSpeedData = odoSpeedData_num;//用于全局传送的odo速度值
 				global_odoTotalData = odoTotalData_num;
 				flagNum = 0;
