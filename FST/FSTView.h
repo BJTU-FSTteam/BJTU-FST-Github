@@ -62,8 +62,6 @@ struct dataType
 
 typedef CList<CRect, CRect> CListRect;
 const unsigned int nBUFSIZE = 128;     //64组数据，每组占两字节
-#define tagQueryEspi 5       //查询ESPI场强值的定时器ID
-#define tagATCtimeCntDn 6    //控发时间倒计时
 #define tagAutoSave 7        //场强文件自动存盘定时器
 #define MSG_COMDATARECV WM_USER+26
 #define ShareBufferSize 10000000		//场强接收缓存区size

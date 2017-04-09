@@ -799,9 +799,7 @@ void CFSTView::OnStopButton()
 		return;
 	Pr100ProcFlag = 0;         //stop Pr100Proc Edit by bzw 161129
 	KillTimer(1);
-	KillTimer(tagQueryEspi);   //停止查询ESPI
 	KillTimer(tagAutoSave);		//停止自动保存timer add by bzw 161124
-	KillTimer(tagATCtimeCntDn);
 	caiji_status = 0;
 	readStatus = 0;
 	Pr100flag = 0;
@@ -1521,7 +1519,7 @@ UINT MyThreadProc(LPVOID pParam)
 					//add end by zgliu 2011.03.03
 					continue;
 				}
-				for (int i = prePulseNum; i < pulseNum; i++)
+				for (long i = prePulseNum; i < pulseNum; i++)
 				{
 					if ((i%2)==0)//二分频
 					{
