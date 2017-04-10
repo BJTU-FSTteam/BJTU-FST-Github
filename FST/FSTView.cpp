@@ -1050,6 +1050,11 @@ void CFSTView::OnPr100Setting()
 {
 	// TODO: 在此添加命令处理程序代码
 	// TODO: 在此添加命令处理程序代码
+	if (caiji_status == TRUE)//add by yjh 
+	{
+		AfxMessageBox("操作过程中不允许设置PR100!!");
+		return;
+	}
 	PR100Setting m_PR100SetDlg;
 	if (IDOK == m_PR100SetDlg.DoModal())
 	{
@@ -2092,6 +2097,7 @@ DWORD WINAPI CFSTView::RecvProc(LPVOID lpParameter)
 			{
 				fst[i] = 0;
 			}
+			//	memset(pView->nLevel,0,10000);
 		}
 		/*方案二：按照采样率要求得到100个瞬时场强的统计值 end*/
 		////////////////////////////////场强统计add by zwbai 170224 end//////////////////////////////////////////

@@ -65,7 +65,7 @@ const unsigned int nBUFSIZE = 128;     //64组数据，每组占两字节
 #define tagAutoSave 7        //场强文件自动存盘定时器
 #define MSG_COMDATARECV WM_USER+26
 #define ShareBufferSize 1000		//场强接收缓存区size
-									 
+
 /*********************以上定义常变量并添加注释********************/
 
 
