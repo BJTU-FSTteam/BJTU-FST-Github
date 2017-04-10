@@ -61,6 +61,8 @@
 #define IDC_SAVEAS_BUTTON               1047
 #define IDC_COMBO1                      1048
 #define IDC_MODESET                     1048
+#define IDC_SPIN1                       1049
+#define IDC_DBBC_SPIN                   1049
 #define ID_PR100_SETTING                32771
 #define ID_START_BUTTON                 32772
 #define ID_STOP_BUTTON                  32773
@@ -77,7 +79,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        323
 #define _APS_NEXT_COMMAND_VALUE         32780
-#define _APS_NEXT_CONTROL_VALUE         1049
+#define _APS_NEXT_CONTROL_VALUE         1050
 #define _APS_NEXT_SYMED_VALUE           310
 #endif
 #endif

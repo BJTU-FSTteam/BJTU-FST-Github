@@ -64,7 +64,7 @@ typedef CList<CRect, CRect> CListRect;
 const unsigned int nBUFSIZE = 128;     //64组数据，每组占两字节
 #define tagAutoSave 7        //场强文件自动存盘定时器
 #define MSG_COMDATARECV WM_USER+26
-#define ShareBufferSize 10000000		//场强接收缓存区size
+#define ShareBufferSize 1000		//场强接收缓存区size
 									 
 /*********************以上定义常变量并添加注释********************/
 
@@ -130,17 +130,10 @@ public:
 	int nCountLevel;
 	SOCKET  nSocketUdp;
 	SOCKET  nSocketTcp;
-	bool WorkAreaFlag;   //FALSE 可读,TRUE 可写
-	bool SampleAreaFlag;  //FALSE 可读,TRUE 可写
-	int pWorkArea;
-	int pSampleArea;
-	unsigned char WorkArea[ShareBufferSize];
-	unsigned char SampleArea[ShareBufferSize];
 	UINT Antenna;
 	static DWORD WINAPI RecvProc(LPVOID lpParameter);
 	static DWORD WINAPI RecvProc_MS(LPVOID lpParameter); //add by yjh 161125
-	void ReadData(unsigned char inData[], unsigned char sharebuffer[], unsigned char odoData[], int sizeofBuf);
-	BOOL starRecordLevel;
+//	void ReadData(unsigned char inData[], unsigned char sharebuffer[], unsigned char odoData[], int sizeofBuf);
 	unsigned char TaxData[6];
 	/*****************************************///add by bzw 161220 end
 private:
@@ -215,6 +208,13 @@ public:
 	afx_msg void OnSelchangeMaintanceCombo();
 	afx_msg void OnTimer(UINT_PTR nIDEvent);
 	bool InitMode();
+	afx_msg void OnUpdateStartButton(CCmdUI *pCmdUI);
+	afx_msg void OnDeltaposDiameterSet(NMHDR *pNMHDR, LRESULT *pResult);
+	afx_msg void OnDeltaposModifySpin(NMHDR *pNMHDR, LRESULT *pResult);
+	afx_msg void OnDeltaposDbbcSpin(NMHDR *pNMHDR, LRESULT *pResult);
+	afx_msg void OnDeltaposSavefileSpin(NMHDR *pNMHDR, LRESULT *pResult);
+	afx_msg void OnDeltaposSpeedSpin(NMHDR *pNMHDR, LRESULT *pResult);
+	afx_msg void OnDeltaposLossdbSpin(NMHDR *pNMHDR, LRESULT *pResult);
 };
 
 

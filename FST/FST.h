@@ -18,6 +18,7 @@ class CFSTApp : public CWinApp
 {
 public:
 	CFSTApp();
+	CView* pView;
 
 
 // ÖØÐ´
