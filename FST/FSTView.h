@@ -215,6 +215,11 @@ public:
 	afx_msg void OnDeltaposSavefileSpin(NMHDR *pNMHDR, LRESULT *pResult);
 	afx_msg void OnDeltaposSpeedSpin(NMHDR *pNMHDR, LRESULT *pResult);
 	afx_msg void OnDeltaposLossdbSpin(NMHDR *pNMHDR, LRESULT *pResult);
+	CString m_gpscapture;
+	CString m_gpssample;
+//	CString gpsstr;
+	CString m_gpsstr;
+	int ReadGPSCor(CString fname);
 };
 
 

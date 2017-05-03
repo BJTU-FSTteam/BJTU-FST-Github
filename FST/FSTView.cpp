@@ -84,6 +84,11 @@ struct fusiondataType
 	double lat;
 	double lon;
 } fusiondata[30720];
+CString gprmcdata[30720];
+int gprmcCount;
+int gprmcfileCount;
+int GPSThreshold = 50;
+
 CString	currentName;
 CString	nextName;
 CString	currentCode;
@@ -146,6 +151,26 @@ unsigned long tempGonglibiao = 0;//add by yjh 161125
 								 
 unsigned int  global_odoSpeedData = 0;//用于全局传送的odo速度值
 unsigned long global_odoTotalData = 0;//用于全局传送的odo脉冲总数
+
+//修正里程点GPS坐标数据
+int			gpscorCount;
+char		gpsName[512][12];
+double		gpsDis[512];
+double		gpsLon[512];
+double		gpsLat[512];
+int			gpsmmflag[512];
+
+int gpscor_flag;
+int gpscapture_flag;
+double gpscaptureDis;
+
+int gpssampleCount = 0;
+int gpscaptureCount = 0;
+/* Zhou's algorithm*/
+#define PI 3.14159265353846		//PI=3.14159265359;
+
+//unsigned long 32bit
+//定义结构体,平面坐标x,y
 struct position
 {
 	double x;
@@ -494,6 +519,9 @@ CFSTView::CFSTView()
 	, m_rate(_T(" 95"))
 	, m_speed(110)
 	, m_updown(_T(" 增加"))
+	, m_gpscapture(_T(""))
+	, m_gpssample(_T(""))
+	, m_gpsstr(_T(""))
 {
 	// TODO: 在此处添加构造代码
 	controlstatus = 0;	//
@@ -614,6 +642,10 @@ void CFSTView::DoDataExchange(CDataExchange* pDX)
 	DDX_Text(pDX, IDC_SPEED_EDIT, m_speed);
 	DDX_CBString(pDX, IDC_UPDOWN_COMBO, m_updown);
 	DDX_Control(pDX, IDC_INQUIRY_LIST, m_inquiry_list);
+	DDX_Text(pDX, IDC_GPSCAPTURE, m_gpscapture);
+	DDX_Text(pDX, IDC_GPSSAMPLE, m_gpssample);
+	//  DDX_Text(pDX, IDC_GPSSTR, gpsstr);
+	DDX_Text(pDX, IDC_GPSSTR, m_gpsstr);
 }
 
 BOOL CFSTView::PreCreateWindow(CREATESTRUCT& cs)
@@ -1425,7 +1457,7 @@ UINT MyThreadProc(LPVOID pParam)
 	int		count, kk;
 	float	dbVal1, cal_voltage, cal_dbval;
 
-	unsigned char inData[64 * 16];
+	unsigned char inData[640 * 16];
 	long pulseNum = 0;
 	long prePulseNum = 0;
 	unsigned int  speedNum;
@@ -1486,8 +1518,28 @@ UINT MyThreadProc(LPVOID pParam)
 	int odoCountNum = 0;
 	while (readStatus == 1) 
 	{
-				pulseNum = global_odoTotalData;
+				pulseNum = global_odoTotalData;				//get odo data edit by zwbai 20170503
 				speedNum = global_odoSpeedData;
+				gpsdata_flag = 0;	//no gps data available	//get gps data edit by zwbai 20170503
+				if (!strncmp((char *)&inData[0], "$GPRMC", 6))
+				{
+					sprintf(gprmc, "");
+					gpsdata_flag = 1;
+
+					if (sim_flag)
+					{
+						while (!feof(simfp))
+						{
+							fscanf(simfp, "%s", gprmc);
+							if (!strncmp(gprmc, "$GPRMC", 6))
+							{
+								strcpy((char *)&inData[0], gprmc);
+								break;
+							}
+						}
+					}
+
+				}
 				/*if (pulseNum == prePulseNum)
 				{
 					pView->m_fCurSpeed = speedNum*unit*1.8/1000;
@@ -1503,255 +1555,409 @@ UINT MyThreadProc(LPVOID pParam)
 					continue;
 				}*/
 				for (long i = prePulseNum; i < pulseNum; i++)
-				{
-					if ((i%2)==0)//二分频
 					{
-						AD_number++;
-						currentDis = startDis + delta*AD_number*unit;
-						sprintf(pp, "Correct:%06d  %06d  %08x  %08x, %02d", speedNum, AD_number, pulseNum, prePulseNum, pulseNum - prePulseNum);
-						pDC.TextOut(400, 350, pp);
-
-						currentDis = startDis + delta*AD_number*unit;
-						prePulseNum = pulseNum;
-						if (((AD_number%pulse100M) == 0))
+						if ((i%2)==0)//二分频
 						{
-							//满足100米开始画图
-							m_FSTbLocked = true;		//取场强值，不可写
-							flagNum = false;
-							data1[AD_num100].curPos = (int)startDis + (delta*AD_num100) * 100;
-							sprintf(pp, "dB: %6.2f %6.2f  %6.2f", data1[AD_num100].AD_95,
-								data1[AD_num100].AD_90, data1[AD_num100].AD_50);
+							AD_number++;
+							currentDis = startDis + delta*AD_number*unit;
+							sprintf(pp, "Correct:%06d  %06d  %08x  %08x, %02d", speedNum, AD_number, pulseNum, prePulseNum, pulseNum - prePulseNum);
+							pDC.TextOut(400, 350, pp);
 
-							fusiondata[AD_num100].curpos = data1[AD_num100].curPos;
-							fusiondata[AD_num100].pulsenum = currentPulsenum;
-							fusiondata[AD_num100].lat = currentLat;
-							fusiondata[AD_num100].lon = currentLon;
-
-							pDC.TextOut(750, 350, pp);
-							dbVal1 = dbvalue_global;
-							AD_value1[AD_num100] = dbVal1;
-
-							m_FSTbLocked = false;			//取到场强值，可写add by zwbai 170224
-							if (0 == sectionNum)
+							currentDis = startDis + delta*AD_number*unit;
+							prePulseNum = pulseNum;
+							if (((AD_number%pulse100M) == 0))
 							{
-								pDC1.MoveTo(nDrawRangeXMin + sectionNum*nPix100m, 410 - (int)(dbVal1)* 4);
+								//满足100米开始画图
+								m_FSTbLocked = true;		//取场强值，不可写
+								flagNum = false;
+								data1[AD_num100].curPos = (int)startDis + (delta*AD_num100) * 100;
+								sprintf(pp, "dB: %6.2f %6.2f  %6.2f", data1[AD_num100].AD_95,
+									data1[AD_num100].AD_90, data1[AD_num100].AD_50);
+
+								fusiondata[AD_num100].curpos = data1[AD_num100].curPos;
+								fusiondata[AD_num100].pulsenum = currentPulsenum;
+								fusiondata[AD_num100].lat = currentLat;
+								fusiondata[AD_num100].lon = currentLon;
+
+								pDC.TextOut(750, 350, pp);
+								dbVal1 = dbvalue_global;
+								AD_value1[AD_num100] = dbVal1;
+
+								m_FSTbLocked = false;			//取到场强值，可写add by zwbai 170224
+								if (0 == sectionNum)
+								{
+									pDC1.MoveTo(nDrawRangeXMin + sectionNum*nPix100m, 410 - (int)(dbVal1)* 4);
+								}
+
+								AD_num100++;
+								sectionNum++;
+								//////////////// Update position of the train and draw the curve ///////////
+								// modified by zgliu 2011.04.14, 将原来的每100米2个像素点改为6个
+								// 先覆盖旧车再画当前位置的小车
+								pDC1.LineTo(nDrawRangeXMin + nPix100m*sectionNum, 410 - (int)(dbVal1)* 4);
+								pDC1.FillSolidRect(nDrawRangeXMin - 30 + sectionNum*nPix100m - nPix100m, 455, 30, 16, 0xFFFFFF);
+								pDC1.BitBlt(nDrawRangeXMin - 30 + sectionNum*nPix100m, 458, 30, 13, &pDC1, 345, 30, SRCCOPY);
+
+								//送往主界面更新显示
+								CString strEidtValue;
+								strEidtValue.Format(_T("%06.1f"), currentDis / 1000.0);
+								pView->SetDlgItemText(IDC_EDIT_CurMileage, strEidtValue);
+								strEidtValue.Format(_T("%05.2f"), dbVal1);
+								pView->SetDlgItemText(IDC_EDIT_CurDBValue, strEidtValue);
+								strEidtValue.Format(_T("%05.1f"), speedNum*unit*1.8 / 1000);   //新适配器odo协议
+								pView->SetDlgItemText(IDC_EDIT_CurSpeed, strEidtValue);
+								// add end by zgliu
 							}
-
-							AD_num100++;
-							sectionNum++;
-							//////////////// Update position of the train and draw the curve ///////////
-							// modified by zgliu 2011.04.14, 将原来的每100米2个像素点改为6个
-							// 先覆盖旧车再画当前位置的小车
-							pDC1.LineTo(nDrawRangeXMin + nPix100m*sectionNum, 410 - (int)(dbVal1)* 4);
-							pDC1.FillSolidRect(nDrawRangeXMin - 30 + sectionNum*nPix100m - nPix100m, 455, 30, 16, 0xFFFFFF);
-							pDC1.BitBlt(nDrawRangeXMin - 30 + sectionNum*nPix100m, 458, 30, 13, &pDC1, 345, 30, SRCCOPY);
-
-							//送往主界面更新显示
+							/*odo speed display edit by zwbai 170307*/
 							CString strEidtValue;
-							strEidtValue.Format(_T("%06.1f"), currentDis / 1000.0);
-							pView->SetDlgItemText(IDC_EDIT_CurMileage, strEidtValue);
-							strEidtValue.Format(_T("%05.2f"), dbVal1);
-							pView->SetDlgItemText(IDC_EDIT_CurDBValue, strEidtValue);
-							strEidtValue.Format(_T("%05.1f"), speedNum*unit*1.8 / 1000);   //新适配器odo协议
+							strEidtValue.Format(_T("%05.1f"), speedNum*unit * 18);   //新适配器odo协议
 							pView->SetDlgItemText(IDC_EDIT_CurSpeed, strEidtValue);
-							// add end by zgliu
-						}
-						/*odo speed display edit by zwbai 170307*/
-						CString strEidtValue;
-						strEidtValue.Format(_T("%05.1f"), speedNum*unit * 18);   //新适配器odo协议
-						pView->SetDlgItemText(IDC_EDIT_CurSpeed, strEidtValue);
 
-						//若列车驶出当前显示范围(startKM+15km)，则重新画屏
-						// add by zgliu 2011.04.13
-						if ((currentDis - (atof(startKM) + 15 * delta)*1000.0)*delta > 0.0)
-						{
-							// 				pDC.SetBkMode(OPAQUE);
-							// 				pDC.SetROP2(nOldDrawMode);
-							pView->Invalidate(TRUE);
-							pDC.FillSolidRect(nDrawRangeXMin + 1, 50, nDrawRangeXMax - nDrawRangeXMin - 2, 450 - 50, 0xFFFFFF); // Rectangle(80+1, 48+1, 950-1, 451-1);
-
-							pDC.SelectObject(&myPen0);
-							for (int i = 0; i < 10; i++)
+							//若列车驶出当前显示范围(startKM+15km)，则重新画屏
+							// add by zgliu 2011.04.13
+							if ((currentDis - (atof(startKM) + 15 * delta)*1000.0)*delta > 0.0)
 							{
-								pDC.MoveTo(nDrawRangeXMin, 50 + i * 40);
-								pDC.LineTo(nDrawRangeXMax, 50 + i * 40);
-							}
-							const int nPix1KM = nPix500M * 2;
-							for (int i = 1; i <= nKMDisplayNum; i++)
-							{
-								pDC.MoveTo(nDrawRangeXMin + i*nPix500M, 50);
-								pDC.LineTo(nDrawRangeXMin + i*nPix500M, 450);
-							}
+								// 				pDC.SetBkMode(OPAQUE);
+								// 				pDC.SetROP2(nOldDrawMode);
+								pView->Invalidate(TRUE);
+								pDC.FillSolidRect(nDrawRangeXMin + 1, 50, nDrawRangeXMax - nDrawRangeXMin - 2, 450 - 50, 0xFFFFFF); // Rectangle(80+1, 48+1, 950-1, 451-1);
 
-							pDC.SelectObject(&myPen3);
-							int	maintance = atoi(pView->m_maintance);
-							pDC.MoveTo(nDrawRangeXMin, 450 - maintance * 4 - 40);
-							pDC.LineTo(nDrawRangeXMax, 450 - maintance * 4 - 40);
-
-							pDC.FillSolidRect(nDrawRangeXMin - 35, 455, nDrawRangeXMax - nDrawRangeXMin + 20, 55, 0xFFFFFF);
-
-							sectionNum = 0;
-							currentName = _T("");
-							nextName = CString(stationName[nextStation]);
-							nextCode.Format("%d", stationNum[nextStation]);
-							float fRangeStart = currentDis / 1000;
-							startKM.Format("%6.2f", fRangeStart);
-							nextKM.Format("%6.2f", stationDis[nextStation]);
-							offset = (int)(fabs(fRangeStart - stationDis[nextStation])*nPix1KM);
-
-							pDC.TextOut(nDrawRangeXMin - 5 - 15, 460 + 10, startKM);
-							pDC.TextOut(nDrawRangeXMin - 5 + offset, 460 + 10, nextKM);
-							pDC.TextOut(nDrawRangeXMin - 5 + offset, 480 + 10, nextName + nextCode);
-
-							DisplayOthers(&pDC, startKM, nextKM);
-
-							// 每1KM显示一个刻度值
-							CFont myKMFont;
-							myKMFont.CreateFont(15, 5, 0, 0, FW_NORMAL, 0, 0, 0, ANSI_CHARSET,
-								OUT_DEVICE_PRECIS, VARIABLE_PITCH | FF_ROMAN, PROOF_QUALITY, 0, _T("ROMAN"));
-							pOldFont = pDC.SelectObject(&myKMFont);
-							const int nDeltaKM = offset / nPix1KM;
-							CString strTempKM;
-							for (int i = 1; i <= nDeltaKM; ++i)
-							{
-								if (i <= (nKMDisplayNum + 1) / 2)
+								pDC.SelectObject(&myPen0);
+								for (int i = 0; i < 10; i++)
 								{
-									if (-1 != pView->m_updown.Find(_T("增加")))
-									{
-										strTempKM.Format(_T("%0.2f"), atof(startKM) + i);
-									}
-									else if (-1 != pView->m_updown.Find(_T("减少")))
-									{
-										strTempKM.Format(_T("%0.2f"), atof(startKM) - i);
-									}
-									pDC.SetTextColor(RGB(0x00, 0x00, 0x00));
-									pDC.TextOut(nDrawRangeXMin - 8 + nPix1KM*i, 455, strTempKM);
+									pDC.MoveTo(nDrawRangeXMin, 50 + i * 40);
+									pDC.LineTo(nDrawRangeXMax, 50 + i * 40);
 								}
-							}
-							pDC.SelectObject(pOldFont);
-
-							pOldPen = pDC.SelectObject(&myPen2);
-							pDC.MoveTo(nDrawRangeXMin + offset / 2, 445);
-							pDC.LineTo(nDrawRangeXMin + offset / 2, 450);
-							pDC.MoveTo(nDrawRangeXMin + offset, 50);
-							pDC.LineTo(nDrawRangeXMin + offset, 450);
-
-							pDC.SetTextColor(RGB(0xFF, 0x00, 0xFF));
-							// 				pDC.SetBkMode(TRANSPARENT);
-							// 				pDC.SetROP2(R2_XORPEN);
-						}
-						// add end by zgliu 
-
-						if (((nextStation > stationCount) && (delta > 0)) || ((nextStation < 0) && (delta < 0)))
-						{
-							if (overPass == 0)
-							{
-								pDC.TextOut(360, 180, _T(" 已到该线路的终点站,请停止测试,重新选择线路!"));
-								overPass = 1;
-								readStatus = 0;
-								Pr100ProcFlag = 0;
-								AfxMessageBox(_T("!!!!!!!!!!!!!完成测试!!!!!!!!!!!!!!!!!!!!!"));
-							}
-						}
-						else if ((currentDis - stationDis[nextStation] * 1000.0)*delta > 0.0) //列车驶入下一站
-						{
-							// 				pDC.SetBkMode(OPAQUE);
-							// 				pDC.SetROP2(nOldDrawMode);
-
-							pDC.FillSolidRect(nDrawRangeXMin + 1, 50, nDrawRangeXMax - nDrawRangeXMin - 2, 400, 0xFFFFFF); // Rectangle(80+1, 48+1, 950-1, 451-1);
-
-							pDC.SelectObject(&myPen0);
-							for (int i = 0; i < 10; i++)
-							{
-								pDC.MoveTo(nDrawRangeXMin, 50 + i * 40);
-								pDC.LineTo(nDrawRangeXMax, 50 + i * 40);
-							}
-							const int nPix1KM = nPix500M * 2;
-							for (int i = 1; i <= nKMDisplayNum; i++)
-							{
-								pDC.MoveTo(nDrawRangeXMin + i*nPix500M, 50);
-								pDC.LineTo(nDrawRangeXMin + i*nPix500M, 450);
-							}
-
-							pDC.SelectObject(&myPen3);
-							int	maintance = atoi(pView->m_maintance);
-							pDC.MoveTo(nDrawRangeXMin, 450 - maintance * 4 - 40);
-							pDC.LineTo(nDrawRangeXMax, 450 - maintance * 4 - 40);
-
-
-							pDC.FillSolidRect(nDrawRangeXMin - 35, 455, nDrawRangeXMax - nDrawRangeXMin + 20, 55, 0xFFFFFF);
-
-							currentStation += delta;
-							nextStation += delta;
-
-							sectionNum = 0;
-							currentName = CString(stationName[currentStation]);
-							nextName = CString(stationName[nextStation]);
-							currentCode.Format("%d", stationNum[currentStation]);
-							nextCode.Format("%d", stationNum[nextStation]);
-							startKM.Format("%6.2f", stationDis[currentStation]);
-							nextKM.Format("%6.2f", stationDis[nextStation]);
-							offset = (int)(fabs(stationDis[currentStation] - stationDis[nextStation])*nPix1KM);
-
-
-							pDC.TextOut(nDrawRangeXMin - 5 - 15, 460 + 10, startKM);
-							pDC.TextOut(nDrawRangeXMin - 5 + offset, 460 + 10, nextKM);
-
-							pDC.TextOut(nDrawRangeXMin - 5 - 15, 480 + 10, currentName + currentCode);
-							pDC.TextOut(nDrawRangeXMin - 5 + offset, 480 + 10, nextName + nextCode);
-
-							DisplayOthers(&pDC, startKM, nextKM);
-
-							// add by zgliu 2011.04.13 
-							// 每1KM显示一个刻度值
-							CFont myKMFont;
-							myKMFont.CreateFont(15, 5, 0, 0, FW_NORMAL, 0, 0, 0, ANSI_CHARSET,
-								OUT_DEVICE_PRECIS, VARIABLE_PITCH | FF_ROMAN, PROOF_QUALITY, 0, _T("ROMAN"));
-							pOldFont = pDC.SelectObject(&myKMFont);
-							const int nDeltaKM = offset / nPix1KM;
-							CString strTempKM;
-							for (int i = 1; i <= nDeltaKM; ++i)
-							{
-								if (i <= (nKMDisplayNum + 1) / 2)
+								const int nPix1KM = nPix500M * 2;
+								for (int i = 1; i <= nKMDisplayNum; i++)
 								{
-									if (-1 != pView->m_updown.Find(_T("增加")))
-									{
-										strTempKM.Format(_T("%0.2f"), atof(startKM) + i);
-									}
-									else if (-1 != pView->m_updown.Find(_T("减少")))
-									{
-										strTempKM.Format(_T("%0.2f"), atof(startKM) - i);
-									}
-									pDC.SetTextColor(RGB(0x00, 0x00, 0x00));
-									pDC.TextOut(nDrawRangeXMin - 8 + nPix1KM*i, 455, strTempKM);
+									pDC.MoveTo(nDrawRangeXMin + i*nPix500M, 50);
+									pDC.LineTo(nDrawRangeXMin + i*nPix500M, 450);
 								}
+
+								pDC.SelectObject(&myPen3);
+								int	maintance = atoi(pView->m_maintance);
+								pDC.MoveTo(nDrawRangeXMin, 450 - maintance * 4 - 40);
+								pDC.LineTo(nDrawRangeXMax, 450 - maintance * 4 - 40);
+
+								pDC.FillSolidRect(nDrawRangeXMin - 35, 455, nDrawRangeXMax - nDrawRangeXMin + 20, 55, 0xFFFFFF);
+
+								sectionNum = 0;
+								currentName = _T("");
+								nextName = CString(stationName[nextStation]);
+								nextCode.Format("%d", stationNum[nextStation]);
+								float fRangeStart = currentDis / 1000;
+								startKM.Format("%6.2f", fRangeStart);
+								nextKM.Format("%6.2f", stationDis[nextStation]);
+								offset = (int)(fabs(fRangeStart - stationDis[nextStation])*nPix1KM);
+
+								pDC.TextOut(nDrawRangeXMin - 5 - 15, 460 + 10, startKM);
+								pDC.TextOut(nDrawRangeXMin - 5 + offset, 460 + 10, nextKM);
+								pDC.TextOut(nDrawRangeXMin - 5 + offset, 480 + 10, nextName + nextCode);
+
+								DisplayOthers(&pDC, startKM, nextKM);
+
+								// 每1KM显示一个刻度值
+								CFont myKMFont;
+								myKMFont.CreateFont(15, 5, 0, 0, FW_NORMAL, 0, 0, 0, ANSI_CHARSET,
+									OUT_DEVICE_PRECIS, VARIABLE_PITCH | FF_ROMAN, PROOF_QUALITY, 0, _T("ROMAN"));
+								pOldFont = pDC.SelectObject(&myKMFont);
+								const int nDeltaKM = offset / nPix1KM;
+								CString strTempKM;
+								for (int i = 1; i <= nDeltaKM; ++i)
+								{
+									if (i <= (nKMDisplayNum + 1) / 2)
+									{
+										if (-1 != pView->m_updown.Find(_T("增加")))
+										{
+											strTempKM.Format(_T("%0.2f"), atof(startKM) + i);
+										}
+										else if (-1 != pView->m_updown.Find(_T("减少")))
+										{
+											strTempKM.Format(_T("%0.2f"), atof(startKM) - i);
+										}
+										pDC.SetTextColor(RGB(0x00, 0x00, 0x00));
+										pDC.TextOut(nDrawRangeXMin - 8 + nPix1KM*i, 455, strTempKM);
+									}
+								}
+								pDC.SelectObject(pOldFont);
+
+								pOldPen = pDC.SelectObject(&myPen2);
+								pDC.MoveTo(nDrawRangeXMin + offset / 2, 445);
+								pDC.LineTo(nDrawRangeXMin + offset / 2, 450);
+								pDC.MoveTo(nDrawRangeXMin + offset, 50);
+								pDC.LineTo(nDrawRangeXMin + offset, 450);
+
+								pDC.SetTextColor(RGB(0xFF, 0x00, 0xFF));
+								// 				pDC.SetBkMode(TRANSPARENT);
+								// 				pDC.SetROP2(R2_XORPEN);
 							}
-							pDC.SelectObject(pOldFont);
 							// add end by zgliu 
 
-							pOldPen = pDC.SelectObject(&myPen2);
-							pDC.MoveTo(nDrawRangeXMin + offset / 2, 445);
-							pDC.LineTo(nDrawRangeXMin + offset / 2, 450);
-							pDC.MoveTo(nDrawRangeXMin + offset, 50);
-							pDC.LineTo(nDrawRangeXMin + offset, 450);
-							pDC.SetTextColor(RGB(0xFF, 0x00, 0xFF));
-							// 				pDC.SetBkMode(TRANSPARENT);
-							// 				pDC.SetROP2(R2_XORPEN);
-							sendFlag = 0;   //allow send timeCode and addressCode again
+							if (((nextStation > stationCount) && (delta > 0)) || ((nextStation < 0) && (delta < 0)))
+							{
+								if (overPass == 0)
+								{
+									pDC.TextOut(360, 180, _T(" 已到该线路的终点站,请停止测试,重新选择线路!"));
+									overPass = 1;
+									readStatus = 0;
+									Pr100ProcFlag = 0;
+									AfxMessageBox(_T("!!!!!!!!!!!!!完成测试!!!!!!!!!!!!!!!!!!!!!"));
+								}
+							}
+							else if ((currentDis - stationDis[nextStation] * 1000.0)*delta > 0.0) //列车驶入下一站
+							{
+								// 				pDC.SetBkMode(OPAQUE);
+								// 				pDC.SetROP2(nOldDrawMode);
+
+								pDC.FillSolidRect(nDrawRangeXMin + 1, 50, nDrawRangeXMax - nDrawRangeXMin - 2, 400, 0xFFFFFF); // Rectangle(80+1, 48+1, 950-1, 451-1);
+
+								pDC.SelectObject(&myPen0);
+								for (int i = 0; i < 10; i++)
+								{
+									pDC.MoveTo(nDrawRangeXMin, 50 + i * 40);
+									pDC.LineTo(nDrawRangeXMax, 50 + i * 40);
+								}
+								const int nPix1KM = nPix500M * 2;
+								for (int i = 1; i <= nKMDisplayNum; i++)
+								{
+									pDC.MoveTo(nDrawRangeXMin + i*nPix500M, 50);
+									pDC.LineTo(nDrawRangeXMin + i*nPix500M, 450);
+								}
+
+								pDC.SelectObject(&myPen3);
+								int	maintance = atoi(pView->m_maintance);
+								pDC.MoveTo(nDrawRangeXMin, 450 - maintance * 4 - 40);
+								pDC.LineTo(nDrawRangeXMax, 450 - maintance * 4 - 40);
+
+
+								pDC.FillSolidRect(nDrawRangeXMin - 35, 455, nDrawRangeXMax - nDrawRangeXMin + 20, 55, 0xFFFFFF);
+
+								currentStation += delta;
+								nextStation += delta;
+
+								sectionNum = 0;
+								currentName = CString(stationName[currentStation]);
+								nextName = CString(stationName[nextStation]);
+								currentCode.Format("%d", stationNum[currentStation]);
+								nextCode.Format("%d", stationNum[nextStation]);
+								startKM.Format("%6.2f", stationDis[currentStation]);
+								nextKM.Format("%6.2f", stationDis[nextStation]);
+								offset = (int)(fabs(stationDis[currentStation] - stationDis[nextStation])*nPix1KM);
+
+
+								pDC.TextOut(nDrawRangeXMin - 5 - 15, 460 + 10, startKM);
+								pDC.TextOut(nDrawRangeXMin - 5 + offset, 460 + 10, nextKM);
+
+								pDC.TextOut(nDrawRangeXMin - 5 - 15, 480 + 10, currentName + currentCode);
+								pDC.TextOut(nDrawRangeXMin - 5 + offset, 480 + 10, nextName + nextCode);
+
+								DisplayOthers(&pDC, startKM, nextKM);
+
+								// add by zgliu 2011.04.13 
+								// 每1KM显示一个刻度值
+								CFont myKMFont;
+								myKMFont.CreateFont(15, 5, 0, 0, FW_NORMAL, 0, 0, 0, ANSI_CHARSET,
+									OUT_DEVICE_PRECIS, VARIABLE_PITCH | FF_ROMAN, PROOF_QUALITY, 0, _T("ROMAN"));
+								pOldFont = pDC.SelectObject(&myKMFont);
+								const int nDeltaKM = offset / nPix1KM;
+								CString strTempKM;
+								for (int i = 1; i <= nDeltaKM; ++i)
+								{
+									if (i <= (nKMDisplayNum + 1) / 2)
+									{
+										if (-1 != pView->m_updown.Find(_T("增加")))
+										{
+											strTempKM.Format(_T("%0.2f"), atof(startKM) + i);
+										}
+										else if (-1 != pView->m_updown.Find(_T("减少")))
+										{
+											strTempKM.Format(_T("%0.2f"), atof(startKM) - i);
+										}
+										pDC.SetTextColor(RGB(0x00, 0x00, 0x00));
+										pDC.TextOut(nDrawRangeXMin - 8 + nPix1KM*i, 455, strTempKM);
+									}
+								}
+								pDC.SelectObject(pOldFont);
+								// add end by zgliu 
+
+								pOldPen = pDC.SelectObject(&myPen2);
+								pDC.MoveTo(nDrawRangeXMin + offset / 2, 445);
+								pDC.LineTo(nDrawRangeXMin + offset / 2, 450);
+								pDC.MoveTo(nDrawRangeXMin + offset, 50);
+								pDC.LineTo(nDrawRangeXMin + offset, 450);
+								pDC.SetTextColor(RGB(0xFF, 0x00, 0xFF));
+								// 				pDC.SetBkMode(TRANSPARENT);
+								// 				pDC.SetROP2(R2_XORPEN);
+								sendFlag = 0;   //allow send timeCode and addressCode again
+							}
+
+						}else{
+								continue;
+						}
+					}
+
+	//GPS数据存储
+		if (gpsdata_flag)
+		{
+			//sprintf(pp, "%s,[%d]", gprmc, strlen(gprmc));
+			//pDC.TextOut(100,570,gprmc);	//output gps data
+			///$GPRMC,213900.00,A,3611.8869946,N,09447.0742503,E,27.971,215.9,080406,0.0,E*66
+			CString gprmc1, gprmc2;
+			CString utc, gpsvalidstr, latstr, lonstr, tmpstr, gspeedstr;
+			int comma, comma1, minflag;
+			double lat, lon, disval, mindisval, gspeed;
+
+			gprmcdata[gprmcCount] = gprmc;
+			gprmcCount++;
+
+			if (gprmcCount > 32000)
+			{
+				//write to gprmc files
+				FILE	*fp4;
+
+				int strLen = pView->m_filename.GetLength();
+				CString tmp = pView->m_filename.Mid(0, strLen - 4);
+				CString gprmcfilename;
+
+				gprmcfilename.Format("%s-%03d.TXT", tmp, gprmcfileCount);
+				fp4 = fopen(gprmcfilename, "a+t");
+				if (fp4 != NULL)
+				{
+					for (int iii = 0; iii < gprmcCount; iii++)
+						fprintf(fp4, "%s", gprmcdata[iii]);
+					fclose(fp4);
+				}
+				gprmcCount = 0;
+				gprmcfileCount++;
+			}
+
+			gprmc2.Format("%s", gprmc);
+			int strLen = gprmc2.GetLength();
+			gprmc1 = gprmc2;
+			comma = gprmc2.Find(",");
+			gprmc1 = gprmc2.Mid(comma + 1, strLen - comma - 1);
+			comma1 = gprmc1.Find(",");
+			utc = gprmc1.Mid(0, comma1);
+
+			strLen = gprmc1.GetLength();
+			gprmc2 = gprmc1.Mid(comma1 + 1, strLen - comma1 - 1);
+			comma = gprmc2.Find(",");
+			gpsvalidstr = gprmc2.Mid(0, comma);
+
+			strLen = gprmc2.GetLength();
+			gprmc1 = gprmc2.Mid(comma + 1, strLen - comma - 1);
+			comma1 = gprmc1.Find(",");
+			latstr = gprmc1.Mid(0, comma1);
+
+			strLen = gprmc1.GetLength();
+			gprmc2 = gprmc1.Mid(comma1 + 1, strLen - comma1 - 1);
+			comma = gprmc2.Find(",");
+			tmpstr = gprmc2.Mid(0, comma);
+
+			strLen = gprmc2.GetLength();
+			gprmc1 = gprmc2.Mid(comma + 1, strLen - comma - 1);
+			comma1 = gprmc1.Find(",");
+			lonstr = gprmc1.Mid(0, comma1);
+
+			strLen = gprmc1.GetLength();
+			gprmc2 = gprmc1.Mid(comma1 + 1, strLen - comma1 - 1);
+			comma = gprmc2.Find(",");
+			tmpstr = gprmc2.Mid(0, comma);
+
+			strLen = gprmc2.GetLength();
+			gprmc1 = gprmc2.Mid(comma + 1, strLen - comma - 1);
+			comma1 = gprmc1.Find(",");
+			gspeedstr = gprmc1.Mid(0, comma1);
+
+			gspeed = atof(gspeedstr)*1.853245;	//convert knot to km/h
+
+			strLen = latstr.GetLength();
+			gprmc1 = latstr.Left(2);
+			gprmc2 = latstr.Right(strLen - 2);
+			lat = atof(gprmc1) + atof(gprmc2) / 60.0;
+			strLen = lonstr.GetLength();
+			gprmc1 = lonstr.Left(3);
+			gprmc2 = lonstr.Right(strLen - 3);
+			lon = atof(gprmc1) + atof(gprmc2) / 60.0;
+
+			currentLat = lat;
+			currentLon = lon;
+
+			if (gpscorCount > 0)
+			{
+				minflag = 1;
+				captureno = -1;
+				for (kkk = 0; kkk < gpscorCount; kkk++)
+				{
+					if (gpsmmflag[kkk] == 1)
+						continue;
+					disval = Distance2(lat, lon, gpsLat[kkk], gpsLon[kkk]);
+					if (minflag == 1)
+					{
+						mindisval = disval;
+						minflag = 0;
+					}
+					else
+					{
+						if (disval < mindisval)
+							mindisval = disval;
+					}
+					//sprintf(pp, "%lf, %lf, %lf, %lf, %lf, %s",
+					//lat, lon, gpsLat[kkk], gpsLon[kkk], disval, gpsName[kkk]);
+					//pDC.TextOut(100, 100+kkk*20, pp);	//output gps data
+					if (disval < GPSThreshold)	//default: 50m
+					{
+						gpscaptureCount++;
+						captureno = kkk;
+						gpsmmflag[kkk] = 1;
+						gpscapture_flag = 1;
+						gpscaptureDis = gpsDis[kkk];
+
+						//pView->m_gpscapture.Format("%d/%d, %.1lf, %d",
+						//gpscaptureCount, gpscorCount, disval, gpscapture_flag);
+
+						fp2 = fopen("MMResults.txt", "a+t");
+						if (fp2 != NULL)
+						{
+							_strdate(dbuffer);
+							_strtime(tbuffer);
+							fprintf(fp2, "%s %s %.2lf, %.2lf, %lf, %lf, %lf, %lf, %.1lf, %s, %d\n",
+								dbuffer, tbuffer, currentDis, gpscaptureDis, lat, lon,
+								gpsLat[captureno], gpsLon[captureno], disval, gpsName[captureno], captureno);
+							fclose(fp2);
 						}
 
-					}else{
-						continue;
 					}
-				}
-					
-				
-				
-		
-	}
+					pView->m_gpscapture.Format("%d/%d, %.1lf(%d), %d",
+						gpscaptureCount, gpscorCount, mindisval, captureno, gpscapture_flag);
+					if (gpscapture_flag)
+						break;
 
-	if (sim_flag)
+				}
+
+			}
+
+			//sprintf(pp, "(%s)UTC时间:%s 纬度：%lf, 经度：%lf, %d, %lf",
+			//gpsvalidstr, utc, lat, lon, gpscorCount, disval);
+			//pDC.TextOut(60, 550, pp);	//output gps data
+			pView->m_gpsstr.Format("(%s)UTC时间:%s 纬度:%lf, 经度:%lf, %.1lfkm/h",
+				gpsvalidstr, utc, lat, lon, gspeed);
+			//pView->m_gpscapture.Format("%d, %lf", gpscorCount, disval);
+			pView->m_gpssample.Format("%d", gpssampleCount);
+			pView->UpdateData(FALSE);	//UpdateGPSDisplay();
+
+			sprintf(pp, "(%s)UTC时间:%s 纬度：%s, 经度：%s",
+				gpsvalidstr, utc, latstr, lonstr);
+			//pDC.TextOut(60, 570, pp);	//output gps data
+
+			gpsdata_flag = 0;
+		}
+
+	}
+	if (sim_flag) {
 		fclose(simfp);
+	}
 
 	tm2 = GetTickCount();
 	sprintf(pp, "%ld %d", tm2 - tm1, AD_num100);
@@ -2248,28 +2454,51 @@ DWORD WINAPI CFSTView::RecvProc_MS(LPVOID lpParameter)
 					gpsData[j] = msBuffer[i + 6];//这个是取出来GPS的数据
 			}
 			//ODO
-			if (-1 != strStored.Find("$ODO"))
+			if (-1 != strStored.Find("$DATA"))
 			{
 				for (j = 0, i = 0; msBuffer[i] != 0x0d; i++, j++)
 				{
-					odoData[j] = msBuffer[i + 4];
+					odoData[j] = msBuffer[i + 5];//从$DATA,之后开始赋值
 				}
-				for (j = 0; odoData[j] != 0x0d; j++)
+				//memset(tempSerialNumSearch, 0, 32);
+				for (j = 0; odoData[j] != 0x0d; j++)//此处对数据进行解包
 				{
-					if (0x2c == odoData[j])//流水号前面和后面有都有一个逗号
+					if (0x2c == odoData[j])
 					{
-						for (tempSearch = j + 1, i = 0; odoData[tempSearch] != 0x2c; tempSearch++, i++)
-						{
-							tempSerialNumSearch[i] = odoData[tempSearch];
-
-						}
-						tempSerialNum = atoi(tempSerialNumSearch);
-						//inData[2]=odoData[tempSearch+1];
-						//inData[3]=odoData[tempSearch+2];
-						//inData[4]=odoData[tempSearch+3];//这部分是取ODO脉冲信息
-
+						j++;
+						flagNum++;
+					}
+					if (flagNum == 1)//放流水号
+					{
+						tempSerialNumSearch[tempSearch] = odoData[j];
+						serialNum = atoi(tempSerialNumSearch);
+						tempSearch++;
+					}
+					if (flagNum == 2)//set mode
+					{
+						workMode = (int)(odoData[j] - '0');
+					}
+					if (flagNum == 3)//放odoSpeed
+					{
+						odoSpeedDataTosend[odoSpeedDataTosend_num] = odoData[j];
+						odoSpeedData_num = atoi(odoSpeedDataTosend);
+						odoSpeedDataTosend_num++;
+					}
+					if (flagNum == 4)//放odo总脉冲数
+					{
+						odoTotalDataTosend[odoTotalDataTosend_num] = odoData[j];
+						odoTotalData_num = atoi(odoTotalDataTosend);
+						odoTotalDataTosend_num++;
 					}
 				}
+
+				global_odoSpeedData = odoSpeedData_num;//用于全局传送的odo速度值
+				global_odoTotalData = odoTotalData_num;
+				flagNum = 0;
+				odoSpeedDataTosend_num = 0;
+				odoTotalDataTosend_num = 0;
+				tempSearch = 0;
+
 			}
 			break;
 		case 3://TAX+GPS
@@ -2524,22 +2753,14 @@ void CFSTView::OnFileOpen()
 		CString	tmp_name = dlgFile.GetPathName();
 		CString	tt_name = dlgFile.GetFileName();
 
-		//add by zgliu 2011.03.18
-		// 	  if (-1 != tmp_name.Find(_T("控发")))
-		// 	  {
-		// 		  MessageBox(_T("您选择的文件不是测试线路的里程库文件!\n请确认已选中正确的里程库文件!"), _T("操作错误"), MB_ICONWARNING);
-		// 		  return;
-		// 	  } 
-		//add end by zgliu 
-
 		int	pos = tmp_name.Find(tt_name);
 		dirName = tmp_name.Left(pos);
-		/*int gpscorcount = ReadGPSCor(tmp_name);
+		int gpscorcount = ReadGPSCor(tmp_name);
 				if (gpscorcount > 0)
 					gpscor_flag = 1;
 				else
 					gpscor_flag = 0;
-		*/
+		
 		int count = ReadLib(tmp_name);
 		if (count > 0)
 		{
@@ -3641,4 +3862,83 @@ void CFSTView::OnDeltaposLossdbSpin(NMHDR *pNMHDR, LRESULT *pResult)
 		}
 	}
 	*pResult = 0;
+}
+
+
+int CFSTView::ReadGPSCor(CString fname)
+{
+	//starts from the index 1
+	char	title[40];
+	CString gpscorfname, tmpprompt;
+	FILE	*fp;
+
+	fname.MakeUpper();
+	int pos = fname.Find(".TXT");
+	gpscorfname = fname.Left(pos) + ".COR";
+
+	fp = fopen(gpscorfname, "rt");
+
+	if (fp == NULL)
+	{
+		tmpprompt.Format("注意：不存在该线的GPS坐标文件但仍可进行正常测试。");
+		MessageBox(tmpprompt, _T("警告"), MB_ICONWARNING);
+		return 0;
+	}
+
+	tmpprompt.Format("存在该线的GPS坐标文件%s，可以利用GPS信息进行里程自动校正！", gpscorfname);
+	MessageBox(tmpprompt, _T("信息"), MB_ICONINFORMATION);
+
+	gpscorCount = 0;
+
+	for (int ii = 0; ii<512; ii++)
+	{
+		strcpy(gpsName[ii], "");
+		gpsDis[ii] = 0.0;
+		gpsLat[ii] = 0.0;
+		gpsLon[ii] = 0.0;
+		gpsmmflag[ii] = 0;
+	}
+
+	//First Line is title
+	fscanf(fp, "%s", title);
+	fscanf(fp, "%s", title);
+	fscanf(fp, "%s", title);
+	fscanf(fp, "%s", title);
+
+
+	char		name[12];
+	double	dis = 0.0 - 1.0;
+	double	lat = 0.0;
+	double	lon = 0.0;
+
+	while (!feof(fp))
+	{
+		strcpy(name, "");
+		dis = 0.0 - 1.0;
+		lat = 0.0;
+		lon = 0.0;
+
+		fscanf(fp, "%s", name);
+		fscanf(fp, "%0.lf", &dis);
+		fscanf(fp, "%0.lf", &lat);
+		fscanf(fp, "%0.lf", &lon);
+		strcpy(gpsName[gpscorCount], name);
+		gpsDis[gpscorCount] = dis;
+		gpsLat[gpscorCount] = lat;
+		gpsLon[gpscorCount] = lon;
+		/*
+		char  pp[90];
+		sprintf(pp,"%s  %lf  %lf  %lf\n%s  %lf  %lf  %lf ",
+		name,dis,lat,lon, gpsName[gpscorCount], gpsDis[gpscorCount],
+		gpsLat[gpscorCount], gpsLon[gpscorCount]);
+		MessageBox(pp);
+		*/
+		gpscorCount++;
+
+	}
+	fclose(fp);
+	m_gpscapture.Format("阈值%dm共计%d个校正点", GPSThreshold, gpscorCount);
+	UpdateData(FALSE);
+
+	return gpscorCount;
 }
