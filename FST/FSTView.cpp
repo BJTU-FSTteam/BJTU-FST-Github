@@ -2055,7 +2055,7 @@ DWORD WINAPI CFSTView::RecvProc(LPVOID lpParameter)
 
 		/*方案二：按照采样率要求得到200个瞬时场强的统计值 start*/
 
-		if (countNum == 200)
+		if (countNum == 100)
 		{
 
 			int kk = 0;
