@@ -40,7 +40,7 @@ extern CFSTApp theApp;
 const int nPix100m = 6;
 /* Zhou's algorithm*/
 #define PI 3.14159265353846		//PI=3.14159265359;
-#define PI1 3.14159265353846		//PI=3.14159265359;
+//#define PI1 3.14159265353846		//PI=3.14159265359;
 //WGS84 椭圆参数及转换参数
 const double A1 = 6367449.1458;
 const double A2 = -16038.508688;
@@ -49,6 +49,7 @@ const double A4 = -0.0220;
 const double a = 6378140;
 const double f = 298.257;
 //unsigned long 32bit
+double pi = atan(1.0)*4.0;      //用于计算轮径的pi
 
 /*********************以上定义全局常量并添加注释********************/
 
@@ -167,7 +168,7 @@ double gpscaptureDis;
 int gpssampleCount = 0;
 int gpscaptureCount = 0;
 /* Zhou's algorithm*/
-#define PI 3.14159265353846		//PI=3.14159265359;
+//#define PI 3.14159265353846		//PI=3.14159265359;
 
 //unsigned long 32bit
 //定义结构体,平面坐标x,y
@@ -181,9 +182,9 @@ struct position BL2xy(double B, double L, double L0)
 {
 	double e2;
 	e2 = 1 - ((f - 1) / f) * ((f - 1) / f);
-	double b = B*PI1 / 180.0;
-	double l = L*PI1 / 180.0;
-	double l0 = L0*PI1 / 180.0;
+	double b = B*PI / 180.0;
+	double l = L*PI / 180.0;
+	double l0 = L0*PI / 180.0;
 	double X;
 	X = A1 * b + A2 * sin(2 * b) + A3 * sin(4 * b) + A4 * sin(6 * b);
 	//子午线的弧长
@@ -591,8 +592,7 @@ CFSTView::CFSTView()
 	//	sprintf(pp,"%d %d %lf",pulse100M, pulse95, unit);
 	//	MessageBox(pp);
 
-	//PI = atan(1.0)*4.0;
-	unit = atof(m_diameter)*PI*0.001 / pulse;		//meter
+	unit = atof(m_diameter)*pi*0.001 / pulse;		//meter
 	pulse100M = (int)(100.0 / unit + 0.5);
 	pulse95 = (int)(5.0 / unit + 0.5);
 	pulse90 = (int)(10.0 / unit + 0.5);
@@ -642,10 +642,11 @@ void CFSTView::DoDataExchange(CDataExchange* pDX)
 	DDX_Text(pDX, IDC_SPEED_EDIT, m_speed);
 	DDX_CBString(pDX, IDC_UPDOWN_COMBO, m_updown);
 	DDX_Control(pDX, IDC_INQUIRY_LIST, m_inquiry_list);
-	DDX_Text(pDX, IDC_GPSCAPTURE, m_gpscapture);
-	DDX_Text(pDX, IDC_GPSSAMPLE, m_gpssample);
-	//  DDX_Text(pDX, IDC_GPSSTR, gpsstr);
-	DDX_Text(pDX, IDC_GPSSTR, m_gpsstr);
+//	DDX_Text(pDX, IDC_GPSCAPTURE, m_gpscapture);
+//	DDX_Text(pDX, IDC_GPSSAMPLE, m_gpssample);
+//  DDX_Text(pDX, IDC_GPSSTR, gpsstr);
+//  DDX_Text(pDX, IDC_GPSSTR, m_gpsstr);
+//	DDX_Text(pDX, IDC_GPSSTR, m_gpsstr);
 }
 
 BOOL CFSTView::PreCreateWindow(CREATESTRUCT& cs)
@@ -836,6 +837,10 @@ void CFSTView::OnStopButton()
 	/*****************************************/
 	modeFlag = false;//add by yjh 161125停止测试的时候，modeFlag置假
 
+	global_odoTotalData = 0;
+	global_odoSpeedData = 0;
+
+
 	Sleep(100);
 	TerminateThread(myThread->m_hThread, 0);
 	GetDlgItem(IDC_LINE_EDIT)->EnableWindow(TRUE);
@@ -1004,7 +1009,8 @@ void CFSTView::OnSavedataButton()
 	tmp = m_filename.Mid(0, strLen - 4);
 	CString gprmcfilename;
 
-	/*gprmcfilename.Format("%s-%03d.TXT", tmp, gprmcfileCount);
+	gprmcfilename.Format("%s-%03d.TXT", tmp, gprmcfileCount);	//写Gps信息，存在.TXT文件中 Edit by zwbai 20170720
+
 	fp4 = fopen(gprmcfilename, "a+t");
 	if (fp4 != NULL)
 	{
@@ -1014,7 +1020,7 @@ void CFSTView::OnSavedataButton()
 	}
 	gprmcCount = 0;
 
-	*/
+	
 	currentNumber = AD_num100;
 
 	if (currentNumber <= currentSavePos)
@@ -1045,11 +1051,13 @@ void CFSTView::OnSavedataButton()
 	else
 	{
 		kk1 = fwrite(&fusiondata[currentSavePos], sizeof(fusiondataType), currentNumber - currentSavePos, fp2);
+		//写odo位置与gps经纬度信息，存在.fus文件中 Edit by zwbai 20170720
 		fclose(fp2);
 	}
 
 
 	kk1 = fwrite(&data1[currentSavePos], sizeof(dataType), currentNumber - currentSavePos, fp1);
+	//写场强与位置信息，存在.dat文件中 Edit by zwbai 20170720
 	fclose(fp1);
 
 
@@ -1367,14 +1375,14 @@ BOOL CFSTView::InitPr100()
 				send(nSocketTcp, "TRAC:UDP:DEF:FLAG:ON \"172.17.75.2\",19000,\"VOLT:AC\"\n", \
 					strlen("TRAC:UDP:DEF:FLAG:ON \"172.17.75.2\",19000,\"VOLT:AC\"\n"), 0);
 				*/
-				send(nSocketTcp, "TRAC:UDP:DEF:FLAG:ON \"192.168.0.7\",19000,\"VOLT:AC\"\n", \
-					strlen("TRAC:UDP:DEF:FLAG:ON \"192.168.0.7\",19000,\"VOLT:AC\"\n"), 0);
+				send(nSocketTcp, "TRAC:UDP:DEF:FLAG:ON \"192.168.0.201\",19000,\"VOLT:AC\"\n", \
+					strlen("TRAC:UDP:DEF:FLAG:ON \"192.168.0.201\",19000,\"VOLT:AC\"\n"), 0);
 				Sleep(50);
 				//
 				/*send(nSocketTcp, "TRAC:UDP:DEF:TAG:ON \"172.17.75.2\",19000,MSC\n", \
 					strlen("TRAC:UDP:DEF:TAG:ON \"172.17.75.2\",19000,MSC\n"), 0);*/
-				send(nSocketTcp, "TRAC:UDP:DEF:TAG:ON \"192.168.0.7\",19000,MSC\n", \
-					strlen("TRAC:UDP:DEF:TAG:ON \"192.168.0.7\",19000,MSC\n"), 0);
+				send(nSocketTcp, "TRAC:UDP:DEF:TAG:ON \"192.168.0.201\",19000,MSC\n", \
+					strlen("TRAC:UDP:DEF:TAG:ON \"192.168.0.201\",19000,MSC\n"), 0);
 				Sleep(50);
 				send(nSocketTcp, "INIT:CONM\n", strlen("INIT:CONM\n"), 0);
 				closesocket(nSocketTcp);
@@ -1521,19 +1529,20 @@ UINT MyThreadProc(LPVOID pParam)
 				pulseNum = global_odoTotalData;				//get odo data edit by zwbai 20170503
 				speedNum = global_odoSpeedData;
 				gpsdata_flag = 0;	//no gps data available	//get gps data edit by zwbai 20170503
-				if (!strncmp((char *)&inData[0], "$GPRMC", 6))
+				sprintf(pp, "%s", gpsData);
+				pDC.TextOut(60, 570, pp);	//output gps data
+				if (!strncmp((char *)&gpsData[0], "$GNRMC", 6))
 				{
 					sprintf(gprmc, "");
 					gpsdata_flag = 1;
-
 					if (sim_flag)
 					{
 						while (!feof(simfp))
 						{
 							fscanf(simfp, "%s", gprmc);
-							if (!strncmp(gprmc, "$GPRMC", 6))
+							if (!strncmp(gprmc, "$GNRMC", 6))
 							{
-								strcpy((char *)&inData[0], gprmc);
+								strcpy((char *)&gpsData[0], gprmc);
 								break;
 							}
 						}
@@ -1568,7 +1577,7 @@ UINT MyThreadProc(LPVOID pParam)
 							if (((AD_number%pulse100M) == 0))
 							{
 								//满足100米开始画图
-								m_FSTbLocked = true;		//取场强值，不可写
+								//m_FSTbLocked = true;		//取场强值，不可写
 								flagNum = false;
 								data1[AD_num100].curPos = (int)startDis + (delta*AD_num100) * 100;
 								sprintf(pp, "dB: %6.2f %6.2f  %6.2f", data1[AD_num100].AD_95,
@@ -1583,7 +1592,7 @@ UINT MyThreadProc(LPVOID pParam)
 								dbVal1 = dbvalue_global;
 								AD_value1[AD_num100] = dbVal1;
 
-								m_FSTbLocked = false;			//取到场强值，可写add by zwbai 170224
+								//m_FSTbLocked = false;			//取到场强值，可写add by zwbai 170224
 								if (0 == sectionNum)
 								{
 									pDC1.MoveTo(nDrawRangeXMin + sectionNum*nPix100m, 410 - (int)(dbVal1)* 4);
@@ -1604,13 +1613,13 @@ UINT MyThreadProc(LPVOID pParam)
 								pView->SetDlgItemText(IDC_EDIT_CurMileage, strEidtValue);
 								strEidtValue.Format(_T("%05.2f"), dbVal1);
 								pView->SetDlgItemText(IDC_EDIT_CurDBValue, strEidtValue);
-								strEidtValue.Format(_T("%05.1f"), speedNum*unit*1.8 / 1000);   //新适配器odo协议
+								strEidtValue.Format(_T("%05.1f"), speedNum*unit*18);   //新适配器odo协议
 								pView->SetDlgItemText(IDC_EDIT_CurSpeed, strEidtValue);
 								// add end by zgliu
 							}
 							/*odo speed display edit by zwbai 170307*/
 							CString strEidtValue;
-							strEidtValue.Format(_T("%05.1f"), speedNum*unit * 18);   //新适配器odo协议
+							strEidtValue.Format(_T("%05.1f"), speedNum*unit*18);   //新适配器odo协议
 							pView->SetDlgItemText(IDC_EDIT_CurSpeed, strEidtValue);
 
 							//若列车驶出当前显示范围(startKM+15km)，则重新画屏
@@ -2207,6 +2216,7 @@ DWORD WINAPI CFSTView::RecvProc(LPVOID lpParameter)
 	CString str, strtemp, strdisplay = "";
 	while (TRUE)
 	{
+		memset(cBuffer, 0, 33);
 		if (0 == Pr100ProcFlag || true == pView->stopPR100)
 		{
 			return 0;
@@ -2282,8 +2292,9 @@ DWORD WINAPI CFSTView::RecvProc(LPVOID lpParameter)
 				count += fst[kk++];
 			data1[AD_num100].AD_50 = AD2dB(kk - 1);
 
-			if (m_FSTbLocked == false)
-			{
+			//if (m_FSTbLocked == false)
+			//{
+
 				if (which == 95)
 				{
 					dbvalue_global = data1[AD_num100].AD_95;
@@ -2296,8 +2307,7 @@ DWORD WINAPI CFSTView::RecvProc(LPVOID lpParameter)
 				{
 					dbvalue_global = data1[AD_num100].AD_50;
 				}
-
-			}
+			//}
 			countNum = 0;
 			for (int i = 0; i<4096; i++)
 			{
@@ -2322,14 +2332,14 @@ DWORD WINAPI CFSTView::RecvProc_MS(LPVOID lpParameter)
 	SOCKET sockMs = ((RECVPARAM*)lpParameter)->sock;
 	HWND hwndMs = ((RECVPARAM*)lpParameter)->hwnd;
 	CFSTView *pViewMs = ((RECVPARAM*)lpParameter)->m_pView;
-	char msBuffer[300];//数据接收缓冲区
+	char msBuffer[1024];//数据接收缓冲区
 	int strLen;
 	char tempSerialNumSearch[32];//判断接收流水号
 	static	int tempSerialNum = 0;
 	int tempSearch = 0;
 	int i, j;
 	CString strStored;
-	memset(msBuffer, 0, 300);
+	memset(msBuffer, 0, 1024);
 	bool tempSerialNumFlag = false;
 	bool speedFlag = false;
 	bool odoTotalFlag = false;
@@ -2339,33 +2349,46 @@ DWORD WINAPI CFSTView::RecvProc_MS(LPVOID lpParameter)
 	int workMode = 0;
 	char odoSpeedDataTosend[10];// odo速度数据 add by yjh
 	char odoTotalDataTosend[32];// odo总里程数据 add by yjh
+	char gpsSpeedDataTosend[32];
+	char gpsLatDataTosend[32];
+	char gpsLonDataTosend[32];
 	char TaxDataTosend[40];
 	char TaxSpeedTosend[10];
 	int odoSpeedDataTosend_num = 0;
 	int odoTotalDataTosend_num = 0;
+	int gpsSpeedDataTosend_num = 0;
+	int gpsLatDataTosend_num = 0;
+	int gpsLonDataTosend_num = 0;
 	int TaxDataTosend_num = 0;
 	int TaxSpeedTosend_num = 0;
 	memset(tempSerialNumSearch, 0,32);
 	memset(odoSpeedDataTosend, 0, 10);
 	memset(odoTotalDataTosend, 0, 32);
+	memset(gpsSpeedDataTosend, 0, 32);
+	memset(gpsLatDataTosend, 0, 32);
+	memset(gpsLonDataTosend, 0, 32);
 
 
 	int serialNum = 0;
 	int odoSpeedData_num = 0;
 	int odoTotalData_num = 0;
+	float gpsSpeedData_num = 0.0;
+	float gpsLatData_num = 0.0;
+	float gpsLonData_num = 0.0;
 	int preoOdoTotalData_num = 0;
 	int count_odo = 0;
 	int diff_odo = 0;
 
 	while (true)
 	{
-		strLen = recv(sockMs, msBuffer, 300, 0);
+		strLen = recv(sockMs, msBuffer, 1024, 0);
 		if (0 == strLen)
 		{
 			AfxMessageBox("接受数据失败!");
 			return 0;
 		}
 		strStored.Format("%s", msBuffer);
+		nWorkMode = 2;
 		switch (nWorkMode)
 		{
 		case 0://ODO
@@ -2376,9 +2399,9 @@ DWORD WINAPI CFSTView::RecvProc_MS(LPVOID lpParameter)
 					odoData[j] = msBuffer[i + 5];//从$DATA,之后开始赋值
 				}
 				//memset(tempSerialNumSearch, 0, 32);
-				for (j = 0; odoData[j] != 0x0d; j++)//此处对数据进行解包
+				for (j = 0; odoData[j] != 0x0d; j++)//此处对数据进行解包，判断回车\r
 				{
-					if (0x2c == odoData[j])
+					if (0x2c == odoData[j])   //判断逗号
 					{
 						j++;
 						flagNum++;
@@ -2447,12 +2470,6 @@ DWORD WINAPI CFSTView::RecvProc_MS(LPVOID lpParameter)
 			}
 			break;
 		case 2://ODO+GPS
-			   //GPS
-			if (-1 != strStored.Find("$GPRMC"))
-			{
-				for (j = 0, i = strStored.Find("$GPRMC"); strStored[i] != 0x0d; i++, j++)
-					gpsData[j] = msBuffer[i + 6];//这个是取出来GPS的数据
-			}
 			//ODO
 			if (-1 != strStored.Find("$DATA"))
 			{
@@ -2490,16 +2507,57 @@ DWORD WINAPI CFSTView::RecvProc_MS(LPVOID lpParameter)
 						odoTotalData_num = atoi(odoTotalDataTosend);
 						odoTotalDataTosend_num++;
 					}
+					if (flagNum == 5)//放tax_glb
+					{
+
+					}
+					if (flagNum == 6)//放tax_speed
+					{
+
+					}
+					if (flagNum == 7)//放gps_lat
+					{
+						gpsLatDataTosend[gpsLatDataTosend_num] = odoData[j];
+						gpsLatData_num = atof(gpsLatDataTosend);
+						gpsLatDataTosend_num++;
+					}
+					if (flagNum == 8)//放gps_lon
+					{
+						gpsLonDataTosend[gpsLonDataTosend_num] = odoData[j];
+						gpsLonData_num = atof(gpsLonDataTosend);
+						gpsLonDataTosend_num++;
+					}
+					if (flagNum == 9)//放gps_speed
+					{
+						gpsSpeedDataTosend[gpsSpeedDataTosend_num] = odoData[j];
+						gpsSpeedData_num = atof(gpsSpeedDataTosend);
+						gpsSpeedDataTosend_num++;
+					}
 				}
+				memset(odoTotalDataTosend, 0, 32);
+				memset(odoSpeedDataTosend, 0, 10);
+				memset(gpsLatDataTosend, 0, 32);
+				memset(gpsLonDataTosend, 0, 32);
+				memset(gpsSpeedDataTosend, 0, 32);
 
 				global_odoSpeedData = odoSpeedData_num;//用于全局传送的odo速度值
 				global_odoTotalData = odoTotalData_num;
 				flagNum = 0;
 				odoSpeedDataTosend_num = 0;
 				odoTotalDataTosend_num = 0;
+				gpsLatDataTosend_num = 0;
+				gpsLonDataTosend_num = 0;
+				gpsSpeedDataTosend_num = 0;
 				tempSearch = 0;
 
 			}
+			if (-1 != strStored.Find("$GNRMC"))
+			{
+				for (j = 0, i = strStored.Find("$GNRMC"); strStored[i] != 0x0d; i++, j++)
+					gpsData[j] = msBuffer[i];//这个是取出来GPS的数据
+
+			}
+
 			break;
 		case 3://TAX+GPS
 			   //GPS
@@ -2584,42 +2642,47 @@ void CFSTView::OnDraw(CDC* pDC)
 
 		CPen myPen3(PS_DOT, 1, RGB(0xE0, 0xE0, 0xFF));
 		pDC->SelectObject(&myPen3);
-
-		for (int i = 0; i < 128; i++)
-		{
-			pDC->MoveTo(0, i * 4);
-			pDC->LineTo(/*1023*/rcClip.Width(), i * 4);
-		}
-		for (int i = 1; i < 256; i++)
-		{
-			pDC->MoveTo(i * 4, 0);
-			pDC->LineTo(i * 4, /*508*/rcClip.Height());
-		}
-
+	
+// 		for (int i = 0; i < 128; i++)
+// 		{
+// 			pDC->MoveTo(0, i * 4);
+// 			pDC->LineTo(/*1023*/rcClip.Width(), i * 4);
+// 		}
+// 		for (int i = 1; i < 256; i++)
+// 		{
+// 			pDC->MoveTo(i * 4, 0);
+// 			pDC->LineTo(i * 4, /*508*/rcClip.Height());
+// 		}
+		
 
 		CFont myFont1, myFont2, *pOldFont;
 		myFont1.CreateFont(90, 30, 0, 0, FW_HEAVY, 0, 0, 0, DEFAULT_CHARSET,
-			OUT_DEVICE_PRECIS, VARIABLE_PITCH | FF_ROMAN, PROOF_QUALITY, 0, _T("隶书"));
+			OUT_DEVICE_PRECIS, VARIABLE_PITCH | FF_ROMAN, PROOF_QUALITY, 0, _T("宋体"));
 		pOldFont = pDC->SelectObject(&myFont1);
 
 		pDC->SetTextColor(RGB(0x00, 0x60, 0x40));
-		for (int i = 1; i < 6; i++)
-			pDC->TextOut(150 - i, 160 - i, _T("无线列调场强自动测试系统"));
-		pDC->SetTextColor(RGB(0x00, 0xC0, 0xA0));
-		pDC->TextOut(150, 160, _T("无线列调场强自动测试系统"));
+		//pDC->SetTextColor(RGB(0x00, 0x60, 0x30));
+
+		//for (int i = 1; i < 6; i++)
+		//	pDC->TextOut(150 - i, 160 - i, _T("新型无线列调场强测试系统"));
+
+		//pDC->SetTextColor(RGB(0x00, 0xC0, 0xA0));
+		pDC->TextOut(150, 160, _T("新型无线列调场强测试系统"));
 		pDC->SelectObject(pOldFont);
 
-		GetParent()->SetWindowText(_T("              无  线  列  调  场  强  自  动  测  试  系  统"));
+		GetParent()->SetWindowText(_T("              新  型  无  线  列  调  场  强  测  试  系  统"));
 
-		myFont2.CreateFont(50, 16, 0, 0, FW_BOLD, 0, 0, 0, DEFAULT_CHARSET,
-			OUT_RASTER_PRECIS, (VARIABLE_PITCH | FF_ROMAN) & 0xFFFD, PROOF_QUALITY, 0, _T("隶书"));
+		//myFont2.CreateFont(50, 16, 0, 0, FW_BOLD, 0, 0, 0, DEFAULT_CHARSET,
+		//	OUT_RASTER_PRECIS, (VARIABLE_PITCH | FF_ROMAN) & 0xFFFD, PROOF_QUALITY, 0, _T("宋体"));
+		myFont2.CreateFont(30, 15, 0, 0, FW_BOLD, 0, 0, 0, DEFAULT_CHARSET,
+			OUT_RASTER_PRECIS, (VARIABLE_PITCH | FF_ROMAN) & 0xFFFD, PROOF_QUALITY, 0, _T("宋体"));
 
 		pOldFont = pDC->SelectObject(&myFont2);
 
 
 		pDC->SetTextColor(RGB(0x00, 0x80, 0xFF));
 		pDC->TextOut(200, 350, _T("研制单位：北京交通大学电子信息工程学院"));
-		pDC->TextOut(410, 435, _T("2O16年11月"));
+		pDC->TextOut(410, 435, _T("2O17年4月"));
 		pDC->SelectObject(pOldFont);
 
 		//ReadLineName("综合库.txt");
@@ -3543,7 +3606,7 @@ void CFSTView::OnSelchangeMaintanceCombo()
 void CFSTView::OnTimer(UINT_PTR nIDEvent)
 {
 	// TODO: 在此添加消息处理程序代码和/或调用默认值
-	/*
+	
 	if (1 == nIDEvent)
 	{
 		int ii, loopcount, Delta;	// 0-pNMUpDown->iDelta;
@@ -3599,7 +3662,7 @@ void CFSTView::OnTimer(UINT_PTR nIDEvent)
 			gpscapture_flag = 0;	//reset gpscapture flag after processing
 		}
 	}
-	*/
+	
 	//GPS部分代码，此处先注释 ，Edit by zwbai 170104
 	if (tagAutoSave == nIDEvent)
 	{
@@ -3679,7 +3742,7 @@ void CFSTView::OnDeltaposDiameterSet(NMHDR *pNMHDR, LRESULT *pResult)
 			temp = atof(m_diameter);
 			temp = temp - 0.1;
 			m_diameter.Format("%0.1f", temp);
-			unit = atof(m_diameter)*PI*0.001 / pulse;
+			unit = atof(m_diameter)*pi*0.001 / pulse;
 			pulse100M = (int)(100.0 / unit + 0.5);
 			pulse95 = (int)(5.0 / unit + 0.5);
 			pulse90 = (int)(10.0 / unit + 0.5);
@@ -3692,7 +3755,7 @@ void CFSTView::OnDeltaposDiameterSet(NMHDR *pNMHDR, LRESULT *pResult)
 			temp = atof(m_diameter);
 			temp = temp + 0.1;
 			m_diameter.Format("%0.1f", temp);
-			unit = atof(m_diameter)*PI*0.001 / pulse;
+			unit = atof(m_diameter)*pi*0.001 / pulse;
 			pulse100M = (int)(100.0 / unit + 0.5);
 			pulse95 = (int)(5.0 / unit + 0.5);
 			pulse90 = (int)(10.0 / unit + 0.5);
@@ -3752,7 +3815,8 @@ void CFSTView::OnDeltaposModifySpin(NMHDR *pNMHDR, LRESULT *pResult)
 			// add end by zgliu 
 		}
 	}
-	Invalidate();
+	Invalidate(TRUE);
+	//Invalidate();
 	*pResult = 0;
 }
 

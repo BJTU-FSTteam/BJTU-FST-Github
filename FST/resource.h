@@ -63,9 +63,6 @@
 #define IDC_MODESET                     1048
 #define IDC_DBBC_SPIN                   1049
 #define IDC_GPSSTR                      1051
-#define IDC_GPSCAPTURE                  1052
-#define IDC_EDIT4                       1053
-#define IDC_GPSSAMPLE                   1053
 #define ID_PR100_SETTING                32771
 #define ID_START_BUTTON                 32772
 #define ID_STOP_BUTTON                  32773

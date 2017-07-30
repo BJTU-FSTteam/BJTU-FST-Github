@@ -218,8 +218,9 @@ public:
 	CString m_gpscapture;
 	CString m_gpssample;
 //	CString gpsstr;
-	CString m_gpsstr;
+//	CString m_gpsstr;
 	int ReadGPSCor(CString fname);
+	CString m_gpsstr;
 };
 
 
