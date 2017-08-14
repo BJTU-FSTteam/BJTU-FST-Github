@@ -115,6 +115,9 @@ public:
 	afx_msg void OnPr100Setting();
 	afx_msg void OnModeButton();
 	BOOL InitPr100();
+	void OnChangeInitDistance();
+	void TAXdataProcess(double preDis);
+
 public:
 	/******************主要用于场强接收线程以及与主线程传递数据使用***********************///add by bzw 161220 start
 	struct RECVPARAM //用于向线程传递参数
@@ -133,6 +136,7 @@ public:
 	UINT Antenna;
 	static DWORD WINAPI RecvProc(LPVOID lpParameter);
 	static DWORD WINAPI RecvProc_MS(LPVOID lpParameter); //add by yjh 161125
+
 //	void ReadData(unsigned char inData[], unsigned char sharebuffer[], unsigned char odoData[], int sizeofBuf);
 	unsigned char TaxData[6];
 	/*****************************************///add by bzw 161220 end

@@ -67,6 +67,7 @@ int		is4403 = 0;		//default: 0 = not using 4403
 int     setStatus = 0;
 int		sectionNum = 0;
 int		AD_number = 0;
+int     Tax_number = 0;//计算两个tax数据间的米数
 int		AD_num100 = 0;
 int		currentStation;
 int		nextStation;
@@ -1471,12 +1472,18 @@ UINT MyThreadProc(LPVOID pParam)
 	unsigned char inData[640 * 16];
 	long pulseNum = 0;
 	long prePulseNum = 0;
+	int taxPosNum = 0;
+	int preTaxPosNum = 0;
+	int taxSpeedNum = 0;
 	unsigned int  speedNum;
 	//unsigned int  vol1;
 	short	vol1;
 	unsigned char  checkByte;
 	bool flagNum = false;
 	//// discard the first 1024 data/////////////
+	unsigned long curMilage, preMilage;
+
+	int getinitdis_flag;
 
 	for (int i = 0; i<4096; i++)
 	{
@@ -1486,6 +1493,12 @@ UINT MyThreadProc(LPVOID pParam)
 	AD_num100 = 0;
 	currentDis = startDis;
 	sectionNum = 0;
+	getinitdis_flag = 0;
+	int samplecount = 0;
+	double preDis;
+
+	preDis = currentDis;
+
 	int	sendFlag = 0;
 	int    which = 95;
 	int    overPass = 0;
@@ -1529,10 +1542,7 @@ UINT MyThreadProc(LPVOID pParam)
 	int odoCountNum = 0;
 	while (readStatus == 1) 
 	{
-				sprintf(pp, "TaxSpeed:%06d  TaxPosition:%06d ", global_taxSpeedData,global_taxPosData);
-				pDC.TextOut(400, 350, pp);
-				pulseNum = global_odoTotalData;				//get odo data edit by zwbai 20170503
-				speedNum = global_odoSpeedData;
+		
 				gpsdata_flag = 0;	//no gps data available	//get gps data edit by zwbai 20170503
 				sprintf(pp, "%s", gpsData);
 				pDC.TextOut(60, 570, pp);	//output gps data
@@ -1568,7 +1578,11 @@ UINT MyThreadProc(LPVOID pParam)
 					}
 					continue;
 				}*/
-				for (long i = prePulseNum; i < pulseNum; i++)
+				if (nWorkMode==0)
+				{
+					pulseNum = global_odoTotalData;				//get odo data edit by zwbai 20170503
+					speedNum = global_odoSpeedData;
+					for (long i = prePulseNum; i < pulseNum; i++)
 					{
 						if ((i%2)==0)//二分频
 						{
@@ -1810,6 +1824,281 @@ UINT MyThreadProc(LPVOID pParam)
 								continue;
 						}
 					}
+				}else if (nWorkMode==1)
+				{
+					taxPosNum = global_taxPosData;				//get odo data edit by zwbai 20170503
+					taxSpeedNum = global_taxSpeedData;
+					
+					if (!getinitdis_flag)
+					{
+						curMilage = taxPosNum;
+
+						//20130414-LSH 防止测试过程中TAX箱里程乱码导致跳变
+						if (curMilage > stationDis[stationCount] * 1000.0)
+						{
+							curMilage = preMilage;
+						}
+
+						preMilage = curMilage;
+						getinitdis_flag = 1;
+
+						//update the init distance
+						pView->m_distance.Format("%.1f", (int)((curMilage / 100)) / 10.0);
+						pView->OnChangeInitDistance();
+
+						//	sprintf(pp,"Init Dis: %06dm (%s) %d", curMilage, pView->m_distance, vol1);
+						//	pDC.TextOut(400,550,pp);
+
+					}
+					else
+					{
+						curMilage = taxPosNum;
+						//sprintf(pp, "实时信息: %06dm (%s) %4.1f", curMilage, pView->m_distance, (vol1 - 100) / 10.0);
+						//pDC.TextOut(150, 530, pp);
+					}
+					currentDis = (int)(curMilage / 1.0);		//unit: meters  //modified by yhb 100320
+					///////////////////实时Tax数据显示////////////////////////
+					sprintf(pp, "TaxSpeed:%06d  TaxPosition:%06d ", global_taxSpeedData, global_taxPosData);
+					pDC.TextOut(400, 350, pp);
+					///////////////////实时Tax数据显示////////////////////////
+					//for (long i = preTaxPosNum; i < pulseNum; i++)
+					//{
+							
+							if ((curMilage - preMilage)*delta >= 100)
+							{
+								//满足100米开始画图
+								//m_FSTbLocked = true;		//取场强值，不可写
+								flagNum = false;
+								preMilage = curMilage;
+								preDis = currentDis;
+
+								data1[AD_num100].curPos = (int)currentDis;
+								sprintf(pp, "dB: %6.2f %6.2f  %6.2f", data1[AD_num100].AD_95,
+									data1[AD_num100].AD_90, data1[AD_num100].AD_50);
+								pDC.TextOut(750, 350, pp);
+								fusiondata[AD_num100].curpos = data1[AD_num100].curPos;
+								fusiondata[AD_num100].pulsenum = taxPosNum;
+								fusiondata[AD_num100].lat = currentLat;
+								fusiondata[AD_num100].lon = currentLon;
+
+								
+								dbVal1 = dbvalue_global;
+								AD_value1[AD_num100] = dbVal1;
+
+								//m_FSTbLocked = false;			//取到场强值，可写add by zwbai 170224
+								if (0 == sectionNum)
+								{
+									pDC1.MoveTo(nDrawRangeXMin + sectionNum*nPix100m, 410 - (int)(dbVal1)* 4);
+								}
+
+								AD_num100++;
+								sectionNum++;
+								//////////////// Update position of the train and draw the curve ///////////
+								// modified by zgliu 2011.04.14, 将原来的每100米2个像素点改为6个
+								// 先覆盖旧车再画当前位置的小车
+								pDC1.LineTo(nDrawRangeXMin + nPix100m*sectionNum, 410 - (int)(dbVal1)* 4);
+								pDC1.FillSolidRect(nDrawRangeXMin - 30 + sectionNum*nPix100m - nPix100m, 455, 30, 16, 0xFFFFFF);
+								pDC1.BitBlt(nDrawRangeXMin - 30 + sectionNum*nPix100m, 458, 30, 13, &pDC1, 345, 30, SRCCOPY);
+
+								//送往主界面更新显示
+								CString strEidtValue;
+								strEidtValue.Format(_T("%06.1f"), currentDis / 1000.0);
+								pView->SetDlgItemText(IDC_EDIT_CurMileage, strEidtValue);
+								strEidtValue.Format(_T("%05.2f"), dbVal1);
+								pView->SetDlgItemText(IDC_EDIT_CurDBValue, strEidtValue);
+								strEidtValue.Format(_T("%05.1f"), speedNum*unit * 18);   //新适配器odo协议
+								pView->SetDlgItemText(IDC_EDIT_CurSpeed, strEidtValue);
+								// add end by zgliu
+							}
+							/*odo speed display edit by zwbai 170307*/
+							CString strEidtValue;
+							strEidtValue.Format(_T("%05.1f"), speedNum*unit * 18);   //新适配器odo协议
+							pView->SetDlgItemText(IDC_EDIT_CurSpeed, strEidtValue);
+
+							//若列车驶出当前显示范围(startKM+15km)，则重新画屏
+							// add by zgliu 2011.04.13
+							if ((currentDis - (atof(startKM) + 15 * delta)*1000.0)*delta > 0.0)
+							{
+								// 				pDC.SetBkMode(OPAQUE);
+								// 				pDC.SetROP2(nOldDrawMode);
+								pView->Invalidate(TRUE);
+								pDC.FillSolidRect(nDrawRangeXMin + 1, 50, nDrawRangeXMax - nDrawRangeXMin - 2, 450 - 50, 0xFFFFFF); // Rectangle(80+1, 48+1, 950-1, 451-1);
+
+								pDC.SelectObject(&myPen0);
+								for (int i = 0; i < 10; i++)
+								{
+									pDC.MoveTo(nDrawRangeXMin, 50 + i * 40);
+									pDC.LineTo(nDrawRangeXMax, 50 + i * 40);
+								}
+								const int nPix1KM = nPix500M * 2;
+								for (int i = 1; i <= nKMDisplayNum; i++)
+								{
+									pDC.MoveTo(nDrawRangeXMin + i*nPix500M, 50);
+									pDC.LineTo(nDrawRangeXMin + i*nPix500M, 450);
+								}
+
+								pDC.SelectObject(&myPen3);
+								int	maintance = atoi(pView->m_maintance);
+								pDC.MoveTo(nDrawRangeXMin, 450 - maintance * 4 - 40);
+								pDC.LineTo(nDrawRangeXMax, 450 - maintance * 4 - 40);
+
+								pDC.FillSolidRect(nDrawRangeXMin - 35, 455, nDrawRangeXMax - nDrawRangeXMin + 20, 55, 0xFFFFFF);
+
+								sectionNum = 0;
+								currentName = _T("");
+								nextName = CString(stationName[nextStation]);
+								nextCode.Format("%d", stationNum[nextStation]);
+								float fRangeStart = currentDis / 1000;
+								startKM.Format("%6.2f", fRangeStart);
+								nextKM.Format("%6.2f", stationDis[nextStation]);
+								offset = (int)(fabs(fRangeStart - stationDis[nextStation])*nPix1KM);
+
+								pDC.TextOut(nDrawRangeXMin - 5 - 15, 460 + 10, startKM);
+								pDC.TextOut(nDrawRangeXMin - 5 + offset, 460 + 10, nextKM);
+								pDC.TextOut(nDrawRangeXMin - 5 + offset, 480 + 10, nextName + nextCode);
+
+								DisplayOthers(&pDC, startKM, nextKM);
+
+								// 每1KM显示一个刻度值
+								CFont myKMFont;
+								myKMFont.CreateFont(15, 5, 0, 0, FW_NORMAL, 0, 0, 0, ANSI_CHARSET,
+									OUT_DEVICE_PRECIS, VARIABLE_PITCH | FF_ROMAN, PROOF_QUALITY, 0, _T("ROMAN"));
+								pOldFont = pDC.SelectObject(&myKMFont);
+								const int nDeltaKM = offset / nPix1KM;
+								CString strTempKM;
+								for (int i = 1; i <= nDeltaKM; ++i)
+								{
+									if (i <= (nKMDisplayNum + 1) / 2)
+									{
+										if (-1 != pView->m_updown.Find(_T("增加")))
+										{
+											strTempKM.Format(_T("%0.2f"), atof(startKM) + i);
+										}
+										else if (-1 != pView->m_updown.Find(_T("减少")))
+										{
+											strTempKM.Format(_T("%0.2f"), atof(startKM) - i);
+										}
+										pDC.SetTextColor(RGB(0x00, 0x00, 0x00));
+										pDC.TextOut(nDrawRangeXMin - 8 + nPix1KM*i, 455, strTempKM);
+									}
+								}
+								pDC.SelectObject(pOldFont);
+
+								pOldPen = pDC.SelectObject(&myPen2);
+								pDC.MoveTo(nDrawRangeXMin + offset / 2, 445);
+								pDC.LineTo(nDrawRangeXMin + offset / 2, 450);
+								pDC.MoveTo(nDrawRangeXMin + offset, 50);
+								pDC.LineTo(nDrawRangeXMin + offset, 450);
+
+								pDC.SetTextColor(RGB(0xFF, 0x00, 0xFF));
+								// 				pDC.SetBkMode(TRANSPARENT);
+								// 				pDC.SetROP2(R2_XORPEN);
+							}
+							// add end by zgliu 
+
+							if (((nextStation > stationCount) && (delta > 0)) || ((nextStation < 0) && (delta < 0)))
+							{
+								if (overPass == 0)
+								{
+									pDC.TextOut(360, 180, _T(" 已到该线路的终点站,请停止测试,重新选择线路!"));
+									overPass = 1;
+									readStatus = 0;
+									Pr100ProcFlag = 0;
+									AfxMessageBox(_T("!!!!!!!!!!!!!完成测试!!!!!!!!!!!!!!!!!!!!!"));
+								}
+							}
+							else if ((currentDis - stationDis[nextStation] * 1000.0)*delta > 0.0) //列车驶入下一站
+							{
+								// 				pDC.SetBkMode(OPAQUE);
+								// 				pDC.SetROP2(nOldDrawMode);
+
+								pDC.FillSolidRect(nDrawRangeXMin + 1, 50, nDrawRangeXMax - nDrawRangeXMin - 2, 400, 0xFFFFFF); // Rectangle(80+1, 48+1, 950-1, 451-1);
+
+								pDC.SelectObject(&myPen0);
+								for (int i = 0; i < 10; i++)
+								{
+									pDC.MoveTo(nDrawRangeXMin, 50 + i * 40);
+									pDC.LineTo(nDrawRangeXMax, 50 + i * 40);
+								}
+								const int nPix1KM = nPix500M * 2;
+								for (int i = 1; i <= nKMDisplayNum; i++)
+								{
+									pDC.MoveTo(nDrawRangeXMin + i*nPix500M, 50);
+									pDC.LineTo(nDrawRangeXMin + i*nPix500M, 450);
+								}
+
+								pDC.SelectObject(&myPen3);
+								int	maintance = atoi(pView->m_maintance);
+								pDC.MoveTo(nDrawRangeXMin, 450 - maintance * 4 - 40);
+								pDC.LineTo(nDrawRangeXMax, 450 - maintance * 4 - 40);
+
+
+								pDC.FillSolidRect(nDrawRangeXMin - 35, 455, nDrawRangeXMax - nDrawRangeXMin + 20, 55, 0xFFFFFF);
+
+								currentStation += delta;
+								nextStation += delta;
+
+								sectionNum = 0;
+								currentName = CString(stationName[currentStation]);
+								nextName = CString(stationName[nextStation]);
+								currentCode.Format("%d", stationNum[currentStation]);
+								nextCode.Format("%d", stationNum[nextStation]);
+								startKM.Format("%6.2f", stationDis[currentStation]);
+								nextKM.Format("%6.2f", stationDis[nextStation]);
+								offset = (int)(fabs(stationDis[currentStation] - stationDis[nextStation])*nPix1KM);
+
+
+								pDC.TextOut(nDrawRangeXMin - 5 - 15, 460 + 10, startKM);
+								pDC.TextOut(nDrawRangeXMin - 5 + offset, 460 + 10, nextKM);
+
+								pDC.TextOut(nDrawRangeXMin - 5 - 15, 480 + 10, currentName + currentCode);
+								pDC.TextOut(nDrawRangeXMin - 5 + offset, 480 + 10, nextName + nextCode);
+
+								DisplayOthers(&pDC, startKM, nextKM);
+
+								// add by zgliu 2011.04.13 
+								// 每1KM显示一个刻度值
+								CFont myKMFont;
+								myKMFont.CreateFont(15, 5, 0, 0, FW_NORMAL, 0, 0, 0, ANSI_CHARSET,
+									OUT_DEVICE_PRECIS, VARIABLE_PITCH | FF_ROMAN, PROOF_QUALITY, 0, _T("ROMAN"));
+								pOldFont = pDC.SelectObject(&myKMFont);
+								const int nDeltaKM = offset / nPix1KM;
+								CString strTempKM;
+								for (int i = 1; i <= nDeltaKM; ++i)
+								{
+									if (i <= (nKMDisplayNum + 1) / 2)
+									{
+										if (-1 != pView->m_updown.Find(_T("增加")))
+										{
+											strTempKM.Format(_T("%0.2f"), atof(startKM) + i);
+										}
+										else if (-1 != pView->m_updown.Find(_T("减少")))
+										{
+											strTempKM.Format(_T("%0.2f"), atof(startKM) - i);
+										}
+										pDC.SetTextColor(RGB(0x00, 0x00, 0x00));
+										pDC.TextOut(nDrawRangeXMin - 8 + nPix1KM*i, 455, strTempKM);
+									}
+								}
+								pDC.SelectObject(pOldFont);
+								// add end by zgliu 
+
+								pOldPen = pDC.SelectObject(&myPen2);
+								pDC.MoveTo(nDrawRangeXMin + offset / 2, 445);
+								pDC.LineTo(nDrawRangeXMin + offset / 2, 450);
+								pDC.MoveTo(nDrawRangeXMin + offset, 50);
+								pDC.LineTo(nDrawRangeXMin + offset, 450);
+								pDC.SetTextColor(RGB(0xFF, 0x00, 0xFF));
+								// 				pDC.SetBkMode(TRANSPARENT);
+								// 				pDC.SetROP2(R2_XORPEN);
+								sendFlag = 0;   //allow send timeCode and addressCode again
+						}
+						else
+						{
+							continue;
+						}
+					}
+				//}
 
 	//GPS数据存储
 		if (gpsdata_flag)
@@ -1994,6 +2283,148 @@ UINT MyThreadProc(LPVOID pParam)
 	return 0;    // thread completed successfully
 }
 
+void CFSTView::OnChangeInitDistance()
+{
+	// TODO: If this is a RICHEDIT control, the control will not
+	// send this notification unless you override the CFormView::OnInitDialog()
+	// function to send the EM_SETEVENTMASK message to the control
+	// with the ENM_CHANGE flag ORed into the lParam mask.
+
+	// TODO: Add your control notification handler code here
+	if ( /*UpdateData(TRUE)  &&*/ m_updown.GetLength() > 3)
+	{
+
+		CClientDC pDC(this);
+		//???	pDC.SetROP2(R2_XORPEN);
+		pDC.SetTextColor(RGB(0xFF, 0x00, 0xFF));
+		CPen	myPen1(PS_SOLID, 1, RGB(0xFF, 0x00, 0xFF));
+		CPen	*pOldPen;
+		pOldPen = pDC.SelectObject(&myPen1);
+
+		CFont	myFont, *pOldFont;
+		myFont.CreateFont(18, 6, 0, 0, FW_NORMAL, 0, 0, 0, ANSI_CHARSET,
+			OUT_DEVICE_PRECIS, VARIABLE_PITCH | FF_ROMAN, PROOF_QUALITY, 0, "ROMAN");
+		pOldFont = pDC.SelectObject(&myFont);
+
+
+		if (offset > 0)
+		{
+			pDC.MoveTo(80 + offset / 2, 445);
+			pDC.LineTo(80 + offset / 2, 450);
+			pDC.MoveTo(80 + offset, 445);
+			pDC.LineTo(80 + offset, 450);
+		}
+
+		pDC.FillSolidRect(60, 455, 800, 50, 0xFFFFFF);
+
+
+		offset = 0;
+
+		startDis = atof(m_distance)*1000.0;
+		startKM = m_distance;
+		nextKM = _T("");
+
+		currentStation = 0 - 1;
+		currentName = _T("");
+		nextName = _T("");
+		currentCode = _T("");
+		nextCode = _T("");
+
+		firstMapped = 0;
+
+		for (int i = 1; i <= stationCount; i++)
+		{
+			if (fabs(stationDis[i] * 1000.0 - startDis) < 100.0)
+			{
+				currentStation = i;
+				currentName = CString(stationName[i]);
+				currentCode.Format("% d", stationNum[i]);
+
+				if (m_updown.Find("增加") != 0 - 1)
+				{
+					nextKM.Format("%6.2f", stationDis[i + 1]);
+					nextName = CString(stationName[i + 1]);
+					nextCode.Format("% d", stationNum[i + 1]);
+					nextStation = i + 1;
+					offset = (int)((stationDis[i + 1] - stationDis[i])*20.0);
+					delta = 1;
+				}
+				else if (m_updown.Find("减少") != 0 - 1)
+				{
+					nextKM.Format("%6.2f", stationDis[i - 1]);
+					nextName = CString(stationName[i - 1]);
+					nextCode.Format("% d", stationNum[i - 1]);
+					nextStation = i - 1;
+					offset = (int)((stationDis[i] - stationDis[i - 1])*20.0);
+					delta = 0 - 1;
+				}
+
+				firstMapped = 1;
+				i = stationCount + 1;
+			}
+
+		}
+
+		if ((firstMapped == 0) && (m_updown.Find("增加") != 0 - 1))
+		{
+			for (int i = 1; i <= stationCount; i++)
+				if (stationDis[i] * 1000.0 > startDis)
+				{
+					currentStation = i - 1;
+					currentName = _T("");
+					currentCode = _T("");
+
+					nextKM.Format("%6.2f", stationDis[i]);
+					nextName = CString(stationName[i]);
+					nextCode.Format("% d", stationNum[i]);
+					nextStation = i;
+					offset = (int)((stationDis[i] - atof(startKM))*20.0);
+					delta = 1;
+					i = stationCount + 1;
+				}
+		}
+
+		else if ((firstMapped == 0) && (m_updown.Find("减少") != 0 - 1))
+		{
+			for (int i = stationCount; i >= 1; i--)
+				if (stationDis[i] * 1000.0 < startDis)
+				{
+					currentStation = i + 1;
+					currentName = _T("");
+					currentCode = _T("");
+
+					nextKM.Format("%6.2f", stationDis[i]);
+					nextName = CString(stationName[i]);
+					nextCode.Format("% d", stationNum[i]);
+					nextStation = i;
+					offset = (int)((atof(startKM) - stationDis[i])*20.0);
+					delta = 0 - 1;
+					i = 0;
+				}
+		}
+
+		pDC.TextOut(80 - 5 - 15, 460 + 10, startKM);
+		pDC.TextOut(80 - 5 + offset, 460 + 10, nextKM);
+
+		pDC.TextOut(80 - 5 - 15, 480 + 10, currentName + currentCode);
+		pDC.TextOut(80 - 5 + offset, 480 + 10, nextName + nextCode);
+
+		DisplayOthers(&pDC, startKM, nextKM);
+
+		if (offset > 0)
+		{
+			pDC.MoveTo(80 + offset / 2, 445);
+			pDC.LineTo(80 + offset / 2, 450);
+			pDC.MoveTo(80 + offset, 445);
+			pDC.LineTo(80 + offset, 450);
+		}
+
+		pDC.SelectObject(pOldPen);
+		pDC.SelectObject(pOldFont);
+
+	}
+
+}
 void CFSTView::InitScreen()
 {
 
