@@ -1578,7 +1578,7 @@ UINT MyThreadProc(LPVOID pParam)
 					}
 					continue;
 				}*/
-				if (nWorkMode==0)
+				if (nWorkMode==0 || nWorkMode==2)
 				{
 					pulseNum = global_odoTotalData;				//get odo data edit by zwbai 20170503
 					speedNum = global_odoSpeedData;
@@ -1824,7 +1824,7 @@ UINT MyThreadProc(LPVOID pParam)
 								continue;
 						}
 					}
-				}else if (nWorkMode==1)
+				}else if (nWorkMode==1||nWorkMode==3)
 				{
 					taxPosNum = global_taxPosData;				//get odo data edit by zwbai 20170503
 					taxSpeedNum = global_taxSpeedData;
@@ -1833,7 +1833,7 @@ UINT MyThreadProc(LPVOID pParam)
 					{
 						curMilage = taxPosNum;
 
-						//20130414-LSH 防止测试过程中TAX箱里程乱码导致跳变
+						//防止测试过程中TAX箱里程乱码导致跳变
 						if (curMilage > stationDis[stationCount] * 1000.0)
 						{
 							curMilage = preMilage;
@@ -1870,7 +1870,7 @@ UINT MyThreadProc(LPVOID pParam)
 								//m_FSTbLocked = true;		//取场强值，不可写
 								flagNum = false;
 								preMilage = curMilage;
-								preDis = currentDis;
+								preDis = currentDis;                           
 
 								data1[AD_num100].curPos = (int)currentDis;
 								sprintf(pp, "dB: %6.2f %6.2f  %6.2f", data1[AD_num100].AD_95,
@@ -1906,13 +1906,13 @@ UINT MyThreadProc(LPVOID pParam)
 								pView->SetDlgItemText(IDC_EDIT_CurMileage, strEidtValue);
 								strEidtValue.Format(_T("%05.2f"), dbVal1);
 								pView->SetDlgItemText(IDC_EDIT_CurDBValue, strEidtValue);
-								strEidtValue.Format(_T("%05.1f"), speedNum*unit * 18);   //新适配器odo协议
+								strEidtValue.Format(_T("%05.1f"), taxSpeedNum*1.0);   //新适配器odo协议
 								pView->SetDlgItemText(IDC_EDIT_CurSpeed, strEidtValue);
 								// add end by zgliu
 							}
 							/*odo speed display edit by zwbai 170307*/
 							CString strEidtValue;
-							strEidtValue.Format(_T("%05.1f"), speedNum*unit * 18);   //新适配器odo协议
+							strEidtValue.Format(_T("%05.1f"), taxSpeedNum*1.0);   //新适配器odo协议
 							pView->SetDlgItemText(IDC_EDIT_CurSpeed, strEidtValue);
 
 							//若列车驶出当前显示范围(startKM+15km)，则重新画屏
@@ -2829,7 +2829,7 @@ DWORD WINAPI CFSTView::RecvProc_MS(LPVOID lpParameter)
 			return 0;
 		}
 		strStored.Format("%s", msBuffer);
-		nWorkMode = 1;
+		nWorkMode = 2;
 		switch (nWorkMode)
 		{
 		case 0://ODO
@@ -2932,7 +2932,7 @@ DWORD WINAPI CFSTView::RecvProc_MS(LPVOID lpParameter)
 			break;
 		case 2://ODO+GPS
 			//ODO
-			if (-1 != strStored.Find("$DATA"))
+			if (msBuffer[1] == 'D')
 			{
 				for (j = 0, i = 0; msBuffer[i] != 0x0d; i++, j++)
 				{
@@ -3028,33 +3028,51 @@ DWORD WINAPI CFSTView::RecvProc_MS(LPVOID lpParameter)
 					gpsData[j] = msBuffer[i + 6];
 			}
 			//TAX
-			if (-1 != strStored.Find("$TAX"))
+			if (msBuffer[1] == 'T')
 			{
 				for (i = 0, j = 0; msBuffer[i] != 0x0d; i++, j++)
 				{
 					taxData[j] = msBuffer[i + 4];
 				}
-				if (0x39 == taxData[0])
+				for (j = 0; taxData[j] != 0x0d; j++)//此处对数据进行解包，判断回车\r
 				{
-					if (0xc0 == taxData[1] || 0x30 == taxData[1])
+					if (0x2c == taxData[j])   //判断逗号
 					{
-						if (0x03 == taxData[2])//tax箱先发送过来的是公里标的低位
-						{
-							memset(kilomter, 0, 6);
-							curGonglibiao = taxData[15] | ((taxData[16]) << 8) | ((taxData[17]) << 16); //绝对公里标
-							for (int tempCount = 0; tempCount < 3; tempCount++)
-							{
-								kilomter[tempCount + 3] = taxData[15 + tempCount];
-							}
-						}
-						else
-							AfxMessageBox("检测单元号错误");
+						j++;
+						flagNum++;
 					}
-					else
-						AfxMessageBox("特征码错误");
+					if (flagNum == 1)//放流水号
+					{
+						tempSerialNumSearch[tempSearch] = taxData[j];
+						serialNum = atoi(tempSerialNumSearch);
+						tempSearch++;
+					}
+					if (flagNum == 2)//放tax_speed
+					{
+						TaxSpeedTosend[TaxSpeedTosend_num] = taxData[j];
+						taxSpeedData_num = atoi(TaxSpeedTosend);
+						TaxSpeedTosend_num++;
+					}
+					if (flagNum == 3)//放tax_pos
+					{
+						TaxPosTosend[TaxPosTosend_num] = taxData[j];
+						taxPosData_num = atoi(TaxPosTosend);
+						TaxPosTosend_num++;
+					}
+
 				}
-				else
-					AfxMessageBox("本版地址错误");
+				memset(TaxSpeedTosend, 0, 10);
+				memset(TaxPosTosend, 0, 40);
+
+				global_taxSpeedData = taxSpeedData_num;//用于全局传送的odo速度值
+				global_taxPosData = taxPosData_num;
+				flagNum = 0;
+				taxSpeedData_num = 0;
+				taxPosData_num = 0;
+				tempSearch = 0;
+				TaxSpeedTosend_num = 0;
+				TaxPosTosend_num = 0;
+
 			}
 			break;
 		case 4://TAX+ODO+GPS
