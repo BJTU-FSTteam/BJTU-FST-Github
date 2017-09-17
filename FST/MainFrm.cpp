@@ -7,6 +7,7 @@
 #include "FSTView.h"
 #include "MainFrm.h"
 #include "afxwin.h"
+#include "exitFrame.h"
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #endif
@@ -163,5 +164,14 @@ void CMainFrame::OnClose()
 		MessageBox(_T("\r\n请先停止当前线路的测试!"), _T("操作提示"));
 		return;
 	}
-	CFrameWnd::OnClose();
+	else
+	{
+		exitFrame cExit;
+		if (IDOK == cExit.DoModal())
+		{
+			//	AfxGetMainWnd()->SendMessage(WM_CLOSE);
+			CFrameWnd::OnClose();
+		}
+
+	}
 }

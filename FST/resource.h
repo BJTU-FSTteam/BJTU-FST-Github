@@ -12,6 +12,8 @@
 #define IDD_INQUIRY_DIALOG              313
 #define IDD_LIBRAY_DIALOG               315
 #define IDD_MODESET                     320
+#define IDD_DIALOG1                     324
+#define IDD_DIALOG_EXIT                 324
 #define IDC_COMBO_Frequency             1000
 #define IDC_LU_EDIT                     1001
 #define IDC_LD_EDIT                     1002
@@ -77,7 +79,7 @@
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
-#define _APS_NEXT_RESOURCE_VALUE        324
+#define _APS_NEXT_RESOURCE_VALUE        326
 #define _APS_NEXT_COMMAND_VALUE         32780
 #define _APS_NEXT_CONTROL_VALUE         1054
 #define _APS_NEXT_SYMED_VALUE           310

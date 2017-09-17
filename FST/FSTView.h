@@ -127,6 +127,7 @@ public:
 		CFSTView* m_pView;
 	};
 	BOOL InitPR100flag; // FALSE:没有初始化场强仪  TRUE: 场强仪完成初始化
+	BOOL InitModeflag;
 	bool stopPR100 = true;   //true停止 false不停止 
 	CString Pr100freq;
 	unsigned char nLevel[10000];

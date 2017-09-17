@@ -190,6 +190,7 @@
     <Text Include="ReadMe.txt" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="exitFrame.h" />
     <ClInclude Include="FST.h" />
     <ClInclude Include="FSTDoc.h" />
     <ClInclude Include="FSTView.h" />
@@ -203,6 +204,7 @@
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="exitFrame.cpp" />
     <ClCompile Include="FST.cpp" />
     <ClCompile Include="FSTDoc.cpp" />
     <ClCompile Include="FSTView.cpp" />

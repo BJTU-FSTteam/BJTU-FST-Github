@@ -605,6 +605,7 @@ CFSTView::CFSTView()
 	/*****************************************/
 	//add by bzw  161110 start
 	InitPR100flag = FALSE;
+	InitModeflag = FALSE;
 	stopPR100 = true;
 
 	//add by bzw  161110 end
@@ -755,8 +756,14 @@ void CFSTView::OnStartButton()
 	//add by yjh  161115 end
 	if (!InitPR100flag)
 	{
-		MessageBox(_T("      请设置场强仪！"));				//pr100模拟程序有问题，此处先注释 Edit by zwbai 161228
+		MessageBox(_T("      请设置场强仪！"));				//pr100设置检验 Edit by zwbai 170810
 		return;
+	}
+	if (!InitModeflag)
+	{
+		MessageBox(_T("      请设置工作模式！"));				//工作模式设置检验 Edit by zwbai 170810
+		return;
+
 	}
 	m_line.TrimLeft();
 	m_line.TrimRight();
@@ -1138,6 +1145,11 @@ void CFSTView::OnPr100Setting()
 void CFSTView::OnModeButton()
 {
 	// TODO: 在此添加命令处理程序代码
+	if (caiji_status == TRUE)//add by yjh 
+	{
+		AfxMessageBox("操作过程中不允许设置工作模式!!");
+		return;
+	}
 	CModeSet CModeSeting;
 	//	0:ODO
 	//	1:TAX
@@ -1164,6 +1176,7 @@ void CFSTView::OnModeButton()
 		{
 
 			AfxMessageBox("模式设置成功");
+			InitModeflag = TRUE;
 			//memset(odoDataTosend, 0, sizeof(odoDataTosend));//对odo数组进行初始化
 			WORD wVersionRequested;
 			WSADATA wsaDataMs;
